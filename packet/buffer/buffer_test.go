@@ -1,4 +1,4 @@
-package packet
+package buffer
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
