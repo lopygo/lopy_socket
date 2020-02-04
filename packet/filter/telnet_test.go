@@ -3,6 +3,7 @@ package filter
 import (
 	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
+	"strconv"
 	"testing"
 )
 
@@ -89,7 +90,7 @@ func TestTelnetFilter_Filter(t *testing.T) {
 
 		var stringBuilder bytes.Buffer
 		stringBuilder.WriteString("测试 telnet filter 第[")
-		stringBuilder.WriteString(string(k))
+		stringBuilder.WriteString(strconv.Itoa(k + 1))
 		stringBuilder.WriteString("]次")
 
 		Convey(stringBuilder.String(),t, func() {
