@@ -2,7 +2,7 @@ package packet
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	pkgBuffer "lopy_socket/packet/buffer"
 	"lopy_socket/packet/filter"
 )
@@ -22,6 +22,7 @@ type Packet struct {
 	// 数据包的最大长度，表示如果一个包超过了这个长度，那么将被丢弃
 	dataMaxLength uint
 
+	onDataCallback func(data filter.IFilterResult)
 	// 缓冲区的最大空间，如果要做自动扩容，那么，这个配置表示扩容后的最大空间，暂时不做自动扩容
 	//bufferZoneMaxLength uint
 }
@@ -45,13 +46,20 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 }
 
 // 获取可用长度，即总的缓冲区长度减当前数据长度
+// 现在加一个，长度减1
 func (p *Packet) GetAvailableLen() uint {
-	return p.bufferZoneLength() - p.currentDataLength()
+	bufLen :=p.bufferZoneLength()
+	dataLen := p.currentDataLength()
+	if dataLen >= bufLen {
+		return 0
+	}
+
+	return p.bufferZoneLength() - p.currentDataLength() - 1
 }
 
 // 这个看怎么做，先暂时写到这里
-func (p *Packet) OnData(buffer []byte) {
-	fmt.Printf("data length is %d", len(buffer))
+func (p *Packet) OnData(callback func(callback filter.IFilterResult)) {
+	p.onDataCallback = callback
 }
 
 // 外部写入数据，估计要考虑并发问题
@@ -83,6 +91,7 @@ func (p *Packet) Put(data []byte) error {
 	return nil
 }
 
+// 读出filter后的数据
 func (p *Packet) readByFilter() {
 	for{
 		data,err := p.getCurrentData()
@@ -110,10 +119,13 @@ func (p *Packet) readByFilter() {
 		// 事件
 		//filterResult.PackageBuffer()
 
-		fmt.Println("??????????????????/")
-		fmt.Println(filterResult.PackageBuffer())
-		fmt.Println(filterResult.DataBuffer())
+		if p.onDataCallback == nil {
+			log.Println("no data callback")
+			return
+		}
 
+		//
+		p.onDataCallback(filterResult)
 	}
 }
 
@@ -145,6 +157,10 @@ func (p *Packet) writePositionAdd(length uint) {
 	}
 }
 
+// 这里有一个临界的问题，主要是 如何表示0值和如何表示满值（即刚好和缓冲区大小一致）
+// 目前，用 w - r = 0 则为 0值，即 []byte{}
+// 用 w 和 r 相邻（循环相邻 比如 1,2    5,6   0,len）时为最大值
+// 但仔细看看，是不是少了一位，比如bufferZone len = 10,那么 r=0,w=9时， dataLength = 9 - 0 =9 ...
 func (p *Packet) currentDataLength() uint {
 	span := int(p.dataWritePosition - p.dataReadPosition)
 	if span >= 0 {

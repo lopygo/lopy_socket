@@ -1,34 +1,129 @@
 package packet
 
 import (
+	"bytes"
+	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"lopy_socket/packet/filter"
+	"strconv"
 	"testing"
 )
 
-
 func TestPacket_BufferZoneLength(t *testing.T) {
-	pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
-	Convey("缓冲区长度",t, func() {
-		So(pa.bufferZoneLength(),ShouldEqual,12)
+	Convey("缓冲区长度", t, func() {
+		pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
+		So(pa.bufferZoneLength(), ShouldEqual, 12)
 	})
 }
-
 
 func TestPacket_SetFilter(t *testing.T) {
 	//pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
 	//pa.SetFilter()
+	Convey("set filter", t, func() {
+		pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
+		Convey("default it is nil", func() {
+			So(pa.dataFilter, ShouldBeNil)
+		})
+		Convey("when filter set", func() {
+			pa.SetFilter(new(filter.TelnetFilter))
+			So(pa.dataFilter, ShouldNotBeNil)
+		})
+	})
 }
 
 func TestPacket_GetFilter(t *testing.T) {
-
+	Convey("get filter", t, func() {
+		pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
+		Convey("default it is nil", func() {
+			fil, err := pa.GetFilter()
+			So(err, ShouldBeError)
+			So(fil, ShouldBeNil)
+		})
+		Convey("when filter set", func() {
+			pa.SetFilter(new(filter.TelnetFilter))
+			fil, err := pa.GetFilter()
+			So(err, ShouldBeNil)
+			So(fil, ShouldNotBeNil)
+			So(fil, ShouldImplement, (*filter.IFilter)(nil))
+		})
+	})
 }
 
 func TestPacket_GetAvailableLen(t *testing.T) {
+	Convey("test getAvailableLen", t, func() {
+		pa := Packet{bufferZone: make([]byte, 12)}
+
+		Convey("default it is len", func() {
+			So(pa.GetAvailableLen(), ShouldEqual, 11)
+		})
+
+		type testItem struct {
+			readPosition  uint
+			writePosition uint
+			expect        uint
+		}
+
+		arr := []testItem{
+			{
+				readPosition:  0,
+				writePosition: 0,
+				expect:        11,
+			},
+			{
+				readPosition:  0,
+				writePosition: 11,
+				expect:        0,
+			},
+			{
+				readPosition:  0,
+				writePosition: 12,	// 原则上是不可能的
+				expect:        0,
+			},
+			{
+				readPosition:  0,
+				writePosition: 4,
+				expect:        7,
+			},
+			{
+				readPosition:  4,
+				writePosition: 11,
+				expect:        4,
+			},
+			{
+				readPosition:  4,
+				writePosition: 6,
+				expect:        9,
+			},
+			{
+				readPosition:  12,
+				writePosition: 0,
+				expect:        11,
+			},
+		}
+
+		for _, item := range arr {
+			builder := bytes.Buffer{}
+			builder.WriteString("when (read,write) is (")
+			builder.WriteString(strconv.Itoa(int(item.readPosition)))
+			builder.WriteString(",")
+			builder.WriteString(strconv.Itoa(int(item.writePosition)))
+			builder.WriteString("), expect (")
+			builder.WriteString(strconv.Itoa(int(item.expect)))
+			builder.WriteString(")")
+
+			Convey(builder.String(), func() {
+				pa.dataReadPosition = item.readPosition
+				pa.dataWritePosition = item.writePosition
+				So(pa.GetAvailableLen(), ShouldEqual, item.expect)
+			})
+
+		}
+	})
 }
 
-
+//
 func TestInsertBuffer(t *testing.T) {
+
 	pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0}
 
 	Convey("第一次插入数据", t, func() {
@@ -76,6 +171,7 @@ func TestInsertBuffer(t *testing.T) {
 	})
 }
 
+// 这个应该有问题，writePosition 应该为开区间，即应该为 0 ~ len
 func TestWritePositionAdd(t *testing.T) {
 	pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
@@ -91,16 +187,20 @@ func TestWritePositionAdd(t *testing.T) {
 			testItem{length: 0, positionExpected: 1},
 			testItem{length: 2, positionExpected: 3},
 			testItem{length: 3, positionExpected: 6},
-			testItem{length: 6, positionExpected: 0}, // 这个
+			testItem{length: 5, positionExpected: 11}, // 这个
+			testItem{length: 1, positionExpected: 0},  // 这个 应该是12，再想一想,应该没有错
 			testItem{length: 1, positionExpected: 1},
 			testItem{length: 12, positionExpected: 1},
 			testItem{length: 13, positionExpected: 2},
 			testItem{length: 26, positionExpected: 4},
+			//testItem{length: 1, positionExpected: 4}, // 专门写个错的在这里，后续直接删
 		}
 
-		for _, item := range arr {
-			pa.writePositionAdd(item.length)
-			So(pa.dataWritePosition, ShouldEqual, item.positionExpected)
+		for k, item := range arr {
+			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(int(item.length)), func() {
+				pa.writePositionAdd(item.length)
+				So(pa.dataWritePosition, ShouldEqual, item.positionExpected)
+			})
 		}
 
 	})
@@ -130,14 +230,73 @@ func TestReadPositionAdd(t *testing.T) {
 			testItem{length: 32, positionExpected: 4},
 		}
 
-		for _, item := range arr {
-			pa.readPositionAdd(item.length)
-			So(pa.dataReadPosition, ShouldEqual, item.positionExpected)
+		for k, item := range arr {
+			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(int(item.length)), func() {
+				pa.readPositionAdd(item.length)
+				So(pa.dataReadPosition, ShouldEqual, item.positionExpected)
+			})
 		}
 	})
 }
 
+// 这里应该也有错的
 func TestGetCurrentData(t *testing.T) {
+
+	Convey("get current data for (readPosition,writePosition)", t, func() {
+		pa := Packet{bufferZone: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, dataWritePosition: 0, dataReadPosition: 0}
+		type testItem struct {
+			readPosition  uint
+			writePosition uint
+			expectBuffer  []byte
+			isErr         bool
+		}
+		arr := []testItem{
+			testItem{readPosition: 0, writePosition: 0, expectBuffer: []byte{}},
+			testItem{readPosition: 0, writePosition: 1, expectBuffer: []byte{1}},
+			testItem{readPosition: 0, writePosition: 2, expectBuffer: []byte{1,2}},
+			testItem{readPosition: 1, writePosition: 0, expectBuffer: []byte{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
+			testItem{readPosition: 1, writePosition: 1, expectBuffer: []byte{}},
+			testItem{readPosition: 1, writePosition: 5, expectBuffer: []byte{2,3,4,5}},
+			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,1}},
+			testItem{readPosition: 3, writePosition: 14, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
+			//testItem{readPosition: 3, writePosition: 15, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15}},// 这个和下面这个
+			testItem{readPosition: 3, writePosition: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15}},	// 这个和上面这个
+			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1}},
+			testItem{readPosition: 3, writePosition: 2, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1,2}},
+			//testItem{readPosition: 3, writePosition: 3, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1,2,3}}, // 这个缺了的
+			testItem{readPosition: 3, writePosition: 3, expectBuffer: []byte{}},
+			testItem{readPosition: 3, writePosition: 4, expectBuffer: []byte{4}},
+			//testItem{readPosition: 3, writePosition: 4, expectBuffer: []byte{41}}, // 故意写错一个先
+
+			// 后面还要加上，尾巴的临界值
+			//testItem{readPosition: 1, writePosition: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2}},
+			testItem{readPosition: 12, writePosition: 13, expectBuffer: []byte{13}},
+			testItem{readPosition: 12, writePosition: 14, expectBuffer: []byte{13,14}},
+			testItem{readPosition: 12, writePosition: 0, expectBuffer: []byte{13,14,15}},
+			testItem{readPosition: 13, writePosition: 13, expectBuffer: []byte{}},
+			testItem{readPosition: 13, writePosition: 14, expectBuffer: []byte{14}},
+			testItem{readPosition: 13, writePosition: 0, expectBuffer: []byte{14,15}},
+		}
+
+		for k, item := range arr {
+			Convey(fmt.Sprintf("number %d: position (%d,%d)", k+1, item.readPosition, item.writePosition), func() {
+				pa.dataReadPosition = item.readPosition
+				pa.dataWritePosition = item.writePosition
+				data, err := pa.getCurrentData()
+
+				if item.isErr {
+					So(err, ShouldBeError)
+				} else {
+					So(data, ShouldResemble, item.expectBuffer)
+				}
+			})
+		}
+	})
+
+}
+
+// 这里应该也有错的
+func TestGetCurrentData2(t *testing.T) {
 	pa := Packet{bufferZone: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
 		readPositionAdd  uint
@@ -151,7 +310,7 @@ func TestGetCurrentData(t *testing.T) {
 		testItem{readPositionAdd: 0, writePositionAdd: 1, expectBuffer: []byte{1}, isErr: false},
 		testItem{readPositionAdd: 1, writePositionAdd: 1, expectBuffer: []byte{2}, isErr: false},
 		testItem{readPositionAdd: 1, writePositionAdd: 0, expectBuffer: []byte{}, isErr: false},
-		testItem{readPositionAdd: 1, writePositionAdd: 0, expectBuffer: []byte{4,5,6,7,8,9,10,11,12,13,14,15,1,2}, isErr: false},
+		testItem{readPositionAdd: 1, writePositionAdd: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2}, isErr: false},
 	}
 
 	Convey("当前数据开始测试", t, func() {
@@ -159,7 +318,6 @@ func TestGetCurrentData(t *testing.T) {
 		for _, item := range arr {
 			pa.readPositionAdd(item.readPositionAdd)
 			pa.writePositionAdd(item.writePositionAdd)
-
 			data, err := pa.getCurrentData()
 
 			if item.isErr {
@@ -227,7 +385,6 @@ func TestCurrentDataLength(t *testing.T) {
 		},
 	}
 
-
 	Convey("当前数据长度开始测试", t, func() {
 
 		for _, item := range arr {
@@ -239,12 +396,24 @@ func TestCurrentDataLength(t *testing.T) {
 }
 
 func TestPacket_Put(t *testing.T) {
-	buf := []byte{1, 2, 3, 4, 0x0d,0x0a,11,22,0x0d,0x0a}
-	telnet := filter.TelnetFilter{}
+	Convey("packet put test", t, func() {
+		telnet := filter.TelnetFilter{}
+		callbackTimes := 0
+		pa := Packet{bufferZone: make([]byte, 16), dataWritePosition: 0, dataReadPosition: 0, dataFilter: &telnet, dataMaxLength: 1024}
 
-	pa := Packet{bufferZone: make([]byte,16), dataWritePosition: 0, dataReadPosition: 0,dataFilter:&telnet,dataMaxLength:1024}
-	err := pa.Put(buf)
-	println(err)
+		Convey("when no error", func() {
+			buf := []byte{1, 2, 3, 4, 0x0d, 0x0a, 11, 22, 0x0d, 0x0a}
+			pa.OnData(func(dataResult filter.IFilterResult) {
+				callbackTimes++
+			})
+			err := pa.Put(buf)
+			So(err, ShouldBeNil)
+			//done <- true
 
+			Convey("filtered data count should be 2", func() {
+				So(callbackTimes, ShouldEqual, 2)
+			})
+		})
 
+	})
 }
