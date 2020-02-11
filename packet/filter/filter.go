@@ -12,7 +12,7 @@ type IFilter interface {
 
 type IFilterResult interface {
 	// 包的长度
-	PackageLength() uint
+	PackageLength() int
 
 	// 包的buffer，包括包头包尾等，指一个完整的包
 	PackageBuffer() []byte
@@ -21,7 +21,7 @@ type IFilterResult interface {
 	SetPackageBuffer([]byte) error
 
 	// 数据的长度，这个其实可以不要
-	DataLength() uint
+	DataLength() int
 
 	// 数据的buffer，这个其实可以不要
 	DataBuffer() []byte

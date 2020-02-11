@@ -58,9 +58,9 @@ func TestPacket_GetAvailableLen(t *testing.T) {
 		})
 
 		type testItem struct {
-			readPosition  uint
-			writePosition uint
-			expect        uint
+			readPosition  int
+			writePosition int
+			expect        int
 		}
 
 		arr := []testItem{
@@ -104,11 +104,11 @@ func TestPacket_GetAvailableLen(t *testing.T) {
 		for _, item := range arr {
 			builder := bytes.Buffer{}
 			builder.WriteString("when (read,write) is (")
-			builder.WriteString(strconv.Itoa(int(item.readPosition)))
+			builder.WriteString(strconv.Itoa(item.readPosition))
 			builder.WriteString(",")
-			builder.WriteString(strconv.Itoa(int(item.writePosition)))
+			builder.WriteString(strconv.Itoa(item.writePosition))
 			builder.WriteString("), expect (")
-			builder.WriteString(strconv.Itoa(int(item.expect)))
+			builder.WriteString(strconv.Itoa(item.expect))
 			builder.WriteString(")")
 
 			Convey(builder.String(), func() {
@@ -175,8 +175,8 @@ func TestInsertBuffer(t *testing.T) {
 func TestWritePositionAdd(t *testing.T) {
 	pa := Packet{bufferZone: make([]byte, 12), dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
-		length           uint
-		positionExpected uint
+		length           int
+		positionExpected int
 	}
 
 	Convey("测试写的位置右移", t, func() {
@@ -197,7 +197,7 @@ func TestWritePositionAdd(t *testing.T) {
 		}
 
 		for k, item := range arr {
-			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(int(item.length)), func() {
+			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(item.length), func() {
 				pa.writePositionAdd(item.length)
 				So(pa.dataWritePosition, ShouldEqual, item.positionExpected)
 			})
@@ -210,8 +210,8 @@ func TestWritePositionAdd(t *testing.T) {
 func TestReadPositionAdd(t *testing.T) {
 	pa := Packet{bufferZone: make([]byte, 15), dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
-		length           uint
-		positionExpected uint
+		length           int
+		positionExpected int
 	}
 
 	Convey("测试读的位置右移", t, func() {
@@ -231,7 +231,7 @@ func TestReadPositionAdd(t *testing.T) {
 		}
 
 		for k, item := range arr {
-			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(int(item.length)), func() {
+			Convey("number "+strconv.Itoa(k+1)+": move left "+strconv.Itoa(item.length), func() {
 				pa.readPositionAdd(item.length)
 				So(pa.dataReadPosition, ShouldEqual, item.positionExpected)
 			})
@@ -245,8 +245,8 @@ func TestGetCurrentData(t *testing.T) {
 	Convey("get current data for (readPosition,writePosition)", t, func() {
 		pa := Packet{bufferZone: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, dataWritePosition: 0, dataReadPosition: 0}
 		type testItem struct {
-			readPosition  uint
-			writePosition uint
+			readPosition  int
+			writePosition int
 			expectBuffer  []byte
 			isErr         bool
 		}
@@ -299,8 +299,8 @@ func TestGetCurrentData(t *testing.T) {
 func TestGetCurrentData2(t *testing.T) {
 	pa := Packet{bufferZone: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
-		readPositionAdd  uint
-		writePositionAdd uint
+		readPositionAdd  int
+		writePositionAdd int
 		expectBuffer     []byte
 		isErr            bool
 	}
@@ -333,9 +333,9 @@ func TestGetCurrentData2(t *testing.T) {
 func TestCurrentDataLength(t *testing.T) {
 	pa := Packet{bufferZone: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, dataWritePosition: 0, dataReadPosition: 0}
 	type testItem struct {
-		readPositionAdd  uint
-		writePositionAdd uint
-		expectLength     uint
+		readPositionAdd  int
+		writePositionAdd int
+		expectLength     int
 	}
 
 	arr := []testItem{

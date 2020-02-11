@@ -11,25 +11,25 @@ type Packet struct {
 	dataFilter filter.IFilter
 
 	// 数据读取点，也就是数据在缓冲区的起点index
-	dataReadPosition uint
+	dataReadPosition int
 
 	// 写数据的点，也就是写之前数据在缓冲区的终点
-	dataWritePosition uint
+	dataWritePosition int
 
 	// 这个应该是缓冲区
 	bufferZone []byte
 
 	// 数据包的最大长度，表示如果一个包超过了这个长度，那么将被丢弃
-	dataMaxLength uint
+	dataMaxLength int
 
 	onDataCallback func(data filter.IFilterResult)
 	// 缓冲区的最大空间，如果要做自动扩容，那么，这个配置表示扩容后的最大空间，暂时不做自动扩容
-	//bufferZoneMaxLength uint
+	//bufferZoneMaxLength int
 }
 
 // 缓冲区长度
-func (p *Packet) bufferZoneLength() uint {
-	return uint(len(p.bufferZone))
+func (p *Packet) bufferZoneLength() int {
+	return len(p.bufferZone)
 }
 
 // 设置过滤规则，即 粘/拆包的规则
@@ -47,7 +47,7 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 
 // 获取可用长度，即总的缓冲区长度减当前数据长度
 // 现在加一个，长度减1
-func (p *Packet) GetAvailableLen() uint {
+func (p *Packet) GetAvailableLen() int {
 	bufLen :=p.bufferZoneLength()
 	dataLen := p.currentDataLength()
 	if dataLen >= bufLen {
@@ -69,7 +69,7 @@ func (p *Packet) Put(data []byte) error {
 		return nil
 	}
 
-	dataLength := uint(len(data))
+	dataLength := len(data)
 	if dataLength > p.dataMaxLength {
 		msg := "数据长度限制，请跟据实际情况重新配置 dataMaxLength"
 		return errors.New(msg)
@@ -130,7 +130,7 @@ func (p *Packet) readByFilter() {
 }
 
 // 将读的指针循环右移
-func (p *Packet) readPositionAdd(length uint) {
+func (p *Packet) readPositionAdd(length int) {
 	bufLen := p.bufferZoneLength()
 	length = length % bufLen
 	if span := bufLen - p.dataReadPosition; span <= length {
@@ -142,7 +142,7 @@ func (p *Packet) readPositionAdd(length uint) {
 }
 
 // 将写的指针循环右移
-func (p *Packet) writePositionAdd(length uint) {
+func (p *Packet) writePositionAdd(length int) {
 	if length == 0 {
 		return
 	}
@@ -161,20 +161,20 @@ func (p *Packet) writePositionAdd(length uint) {
 // 目前，用 w - r = 0 则为 0值，即 []byte{}
 // 用 w 和 r 相邻（循环相邻 比如 1,2    5,6   0,len）时为最大值
 // 但仔细看看，是不是少了一位，比如bufferZone len = 10,那么 r=0,w=9时， dataLength = 9 - 0 =9 ...
-func (p *Packet) currentDataLength() uint {
-	span := int(p.dataWritePosition - p.dataReadPosition)
+func (p *Packet) currentDataLength() int {
+	span := p.dataWritePosition - p.dataReadPosition
 	if span >= 0 {
-		return uint(span)
+		return span
 	}
 
-	return p.bufferZoneLength() - uint(-span)
+	return p.bufferZoneLength() - -span
 }
 
 // 向缓冲区插入数据
 // 只管插入数据，不管是否溢出吗？考虑一下
 func (p *Packet) insertBuffer(buf []byte) error {
-	zoneCap := uint(cap(p.bufferZone))
-	bufLen := uint(len(buf))
+	zoneCap := cap(p.bufferZone)
+	bufLen := len(buf)
 
 	if bufLen > p.bufferZoneLength() {
 		// 这里应该清空数据
@@ -183,24 +183,24 @@ func (p *Packet) insertBuffer(buf []byte) error {
 		return errors.New("插入的数据不能大于缓冲区的长度")
 	}
 
-	if lengthSpan := int(p.dataWritePosition + bufLen - zoneCap); lengthSpan > 0 {
+	if lengthSpan := p.dataWritePosition + bufLen - zoneCap; lengthSpan > 0 {
 		// 需要截成部分
 
 		// 前半部分，放尾巴
-		err := pkgBuffer.BlockCopy(buf, 0, p.bufferZone, int(p.dataWritePosition), int(bufLen)-lengthSpan)
+		err := pkgBuffer.BlockCopy(buf, 0, p.bufferZone, p.dataWritePosition, bufLen-lengthSpan)
 		if err != nil {
 			return err
 		}
 
 		// 后半部分，放开头
-		err = pkgBuffer.BlockCopy(buf, int(bufLen)-lengthSpan, p.bufferZone, 0, lengthSpan)
+		err = pkgBuffer.BlockCopy(buf, bufLen-lengthSpan, p.bufferZone, 0, lengthSpan)
 		if err != nil {
 			return err
 		}
-		p.dataWritePosition = uint(lengthSpan) // 截后的长度
+		p.dataWritePosition = lengthSpan // 截后的长度
 	} else {
 		// 不用截
-		err := pkgBuffer.BlockCopy(buf, 0, p.bufferZone, int(p.dataWritePosition), int(bufLen))
+		err := pkgBuffer.BlockCopy(buf, 0, p.bufferZone, p.dataWritePosition, bufLen)
 		if err != nil {
 			return err
 		}
@@ -220,20 +220,20 @@ func (p *Packet) getCurrentData() ([]byte, error) {
 	if p.dataReadPosition+length > bufferLength {
 		//第一部分，取从readPosition 开始到末尾
 
-		firstLength := int(bufferLength - p.dataReadPosition)
-		err := pkgBuffer.BlockCopy(p.bufferZone, int(p.dataReadPosition), buffer, 0, firstLength)
+		firstLength := bufferLength - p.dataReadPosition
+		err := pkgBuffer.BlockCopy(p.bufferZone, p.dataReadPosition, buffer, 0, firstLength)
 		if err != nil {
 			return []byte{}, err
 		}
 
 		// 第二部分，从开始位置开始取，直到取满长度
-		err = pkgBuffer.BlockCopy(p.bufferZone, 0, buffer, firstLength, int(length)-firstLength)
+		err = pkgBuffer.BlockCopy(p.bufferZone, 0, buffer, firstLength, length-firstLength)
 		if err != nil {
 			return []byte{}, err
 		}
 
 	} else {
-		err := pkgBuffer.BlockCopy(p.bufferZone, int(p.dataReadPosition), buffer, 0, int(length))
+		err := pkgBuffer.BlockCopy(p.bufferZone, p.dataReadPosition, buffer, 0, length)
 		if err != nil {
 			return []byte{}, err
 		}

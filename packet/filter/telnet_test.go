@@ -50,8 +50,8 @@ func TestTelnetFilter_Filter(t *testing.T) {
 		isError bool
 		expectPackage []byte
 		expectData []byte
-		expectPackageLength uint
-		expectDataLength uint
+		expectPackageLength int
+		expectDataLength int
 	}
 
 	arr := []testItem{

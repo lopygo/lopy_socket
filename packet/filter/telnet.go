@@ -15,8 +15,8 @@ type TelnetFilterResult struct {
 
 }
 
-func (p *TelnetFilterResult) PackageLength() uint {
-	return uint(len(p.packageBuffer))
+func (p *TelnetFilterResult) PackageLength() int {
+	return len(p.packageBuffer)
 }
 
 func (p *TelnetFilterResult) PackageBuffer() []byte {
@@ -27,8 +27,8 @@ func (p *TelnetFilterResult) DataBuffer() []byte {
 	return p.dataBuffer
 }
 
-func (p *TelnetFilterResult) DataLength() uint {
-	return uint(len(p.dataBuffer))
+func (p *TelnetFilterResult) DataLength() int {
+	return len(p.dataBuffer)
 }
 
 func (p *TelnetFilterResult) SetPackageBuffer(buffer []byte) error {
