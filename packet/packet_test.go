@@ -5,6 +5,7 @@ import (
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"lopy_socket/packet/filter"
+	"lopy_socket/packet/filter/terminator/telnet"
 	"strconv"
 	"testing"
 )
@@ -25,7 +26,8 @@ func TestPacket_SetFilter(t *testing.T) {
 			So(pa.dataFilter, ShouldBeNil)
 		})
 		Convey("when filter set", func() {
-			pa.SetFilter(new(filter.TelnetFilter))
+			telnetFilter,_ := telnet.NewFilter()
+			pa.SetFilter(telnetFilter)
 			So(pa.dataFilter, ShouldNotBeNil)
 		})
 	})
@@ -40,7 +42,8 @@ func TestPacket_GetFilter(t *testing.T) {
 			So(fil, ShouldBeNil)
 		})
 		Convey("when filter set", func() {
-			pa.SetFilter(new(filter.TelnetFilter))
+			telnetFilter,_ := telnet.NewFilter()
+			pa.SetFilter(telnetFilter)
 			fil, err := pa.GetFilter()
 			So(err, ShouldBeNil)
 			So(fil, ShouldNotBeNil)
@@ -397,9 +400,10 @@ func TestCurrentDataLength(t *testing.T) {
 
 func TestPacket_Put(t *testing.T) {
 	Convey("packet put test", t, func() {
-		telnet := filter.TelnetFilter{}
+		//telnet := filter.TelnetFilter{}
+		telnetFilter,_ := telnet.NewFilter()
 		callbackTimes := 0
-		pa := Packet{bufferZone: make([]byte, 16), dataWritePosition: 0, dataReadPosition: 0, dataFilter: &telnet, dataMaxLength: 1024}
+		pa := Packet{bufferZone: make([]byte, 16), dataWritePosition: 0, dataReadPosition: 0, dataFilter: telnetFilter, dataMaxLength: 1024}
 
 		Convey("when no error", func() {
 			buf := []byte{1, 2, 3, 4, 0x0d, 0x0a, 11, 22, 0x0d, 0x0a}

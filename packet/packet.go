@@ -114,10 +114,10 @@ func (p *Packet) readByFilter() {
 			p.dataWritePosition = 0
 			break
 		}
-		p.readPositionAdd(filterResult.PackageLength())
+		p.readPositionAdd(filterResult.GetPackageLength())
 
 		// 事件
-		//filterResult.PackageBuffer()
+		//filterResult.GetPackageBuffer()
 
 		if p.onDataCallback == nil {
 			log.Println("no data callback")
