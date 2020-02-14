@@ -1,14 +1,16 @@
-package packet
+// hello
+package packet_test
 
 import (
 	"fmt"
+	"lopy_socket/packet"
 	"lopy_socket/packet/filter"
 	"lopy_socket/packet/filter/fixed_head"
 )
 
-func ExampleNewPacket() {
+func ExamplePacket_Put() {
 	filterInstance := fixed_head.NewFilter(2,6)
-	packetInstance := NewPacket(NewOptionDefault())
+	packetInstance := packet.NewPacket(packet.NewOptionDefault())
 	packetInstance.SetFilter(filterInstance)
 
 	packetInstance.OnData(func(dataResult filter.IFilterResult) {
@@ -28,7 +30,8 @@ func ExampleNewPacket() {
 	packetInstance.Put([]byte{0x26,0x26,0,0,0})
 	fmt.Println("part 2")
 	packetInstance.Put([]byte{4,8,9,10,11})
-	// 以下为打印的结果
+
+	// Output:
 	//先试一个完整包
 	//[35 35 0 0 0 2 1 2]
 	//[1 2]

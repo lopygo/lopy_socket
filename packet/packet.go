@@ -55,7 +55,7 @@ func (p *Packet) bufferZoneLength() int {
 	return len(p.bufferZone)
 }
 
-// 设置过滤规则，即 粘/拆包的过滤规则
+// Deprecated: 设置过滤规则，即 粘/拆包的过滤规则
 //
 // 这个方法不应该这样写的，而应该在NewPacket的时候指定
 //
