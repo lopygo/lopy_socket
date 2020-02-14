@@ -1,3 +1,4 @@
+// 固定请求大小的协议
 package fixed_size
 
 import (

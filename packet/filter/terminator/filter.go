@@ -1,3 +1,4 @@
+// 固定终止符的协议
 package terminator
 
 import (
@@ -9,7 +10,7 @@ type Filter struct {
 	endBuffer []byte
 }
 
-func NewFilterWithEndBuffer(endBuffer []byte) (*Filter, error) {
+func NewFilter(endBuffer []byte) (*Filter, error) {
 	fil := new(Filter)
 	// 基本的判断
 	if len(endBuffer) == 0 {

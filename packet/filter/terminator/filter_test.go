@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestNewFilterWithEndBuffer(t *testing.T) {
-	Convey("TestNewFilterWithEndBuffer",t, func() {
+func TestNewFilter(t *testing.T) {
+	Convey("TestNewFilter",t, func() {
 		Convey("end buffer is empty", func() {
-			fil,err := NewFilterWithEndBuffer([]byte{})
+			fil,err := NewFilter([]byte{})
 			So(fil,ShouldBeNil)
 			So(err,ShouldNotBeNil)
 		})
@@ -17,7 +17,7 @@ func TestNewFilterWithEndBuffer(t *testing.T) {
 		Convey("end buffer is not empty", func() {
 
 			example := []byte{4}
-			fil,err := NewFilterWithEndBuffer(example)
+			fil,err := NewFilter(example)
 
 			So(fil,ShouldImplement,(*filter.IFilter)(nil))
 			So(err,ShouldBeNil)
@@ -33,7 +33,7 @@ func TestFilter_Filter(t *testing.T) {
 
 		example := []byte{4}
 		Convey("当缓冲区的数据也是一位长度，且不等", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 			bufZone := []byte{5}
 
 			result,err := fil.Filter(bufZone)
@@ -43,7 +43,7 @@ func TestFilter_Filter(t *testing.T) {
 		})
 
 		Convey("当缓冲区的数据也是一位长度，且相等", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 
 			bufZone := []byte{4}
 			result,err :=  fil.Filter(bufZone)
@@ -60,7 +60,7 @@ func TestFilter_Filter(t *testing.T) {
 	Convey(" when the length of end buffer is not 1",t, func() {
 		example := []byte{5,9}
 		Convey("当缓冲区的数据长度相同，数据不同", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 			bufZone := []byte{5,7}
 
 			result,err := fil.Filter(bufZone)
@@ -70,7 +70,7 @@ func TestFilter_Filter(t *testing.T) {
 		})
 
 		Convey("当缓冲区的数据长度相同，数据相同",func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 
 			bufZone := []byte{5,9}
 			result,err :=  fil.Filter(bufZone)
@@ -84,7 +84,7 @@ func TestFilter_Filter(t *testing.T) {
 		})
 
 		Convey("当缓冲区的数据长度不同，不包含终止符", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 
 			bufZone := []byte{5,3,9}
 			result,err :=  fil.Filter(bufZone)
@@ -96,7 +96,7 @@ func TestFilter_Filter(t *testing.T) {
 		})
 
 		Convey("当缓冲区的数据长度不同，包含终止符", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 
 			bufZone := []byte{3,5,9}
 			result,err :=  fil.Filter(bufZone)
@@ -111,7 +111,7 @@ func TestFilter_Filter(t *testing.T) {
 
 
 		Convey("当缓冲区的数据长度不同，包含终止符，且终止符后面还有数据", func() {
-			fil,_ := NewFilterWithEndBuffer(example)
+			fil,_ := NewFilter(example)
 
 			bufZone := []byte{3,3,4,4,5,9,5,6,1}
 			result,err :=  fil.Filter(bufZone)
@@ -131,7 +131,7 @@ func TestFilter_Filter(t *testing.T) {
 func TestFilter_GetFilterResult(t *testing.T) {
 	Convey("TestFilter_GetFilterResult",t, func() {
 
-		fil,_ := NewFilterWithEndBuffer([]byte{1})
+		fil,_ := NewFilter([]byte{1})
 		result,err := fil.GetFilterResult()
 		So(err,ShouldBeNil)
 		So(result,ShouldImplement,(*filter.IFilterResult)(nil))
@@ -142,7 +142,7 @@ func TestFilter_GetTerminatorBuffer(t *testing.T) {
 	Convey(" TestFilter_GetTerminatorBuffer",t, func() {
 
 		example := []byte{1}
-		fil,_ := NewFilterWithEndBuffer(example)
+		fil,_ := NewFilter(example)
 		result := fil.GetTerminatorBuffer()
 
 		//So(err,ShouldBeNil)

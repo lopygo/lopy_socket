@@ -5,6 +5,7 @@ import (
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"lopy_socket/packet/filter"
+	"lopy_socket/packet/filter/fixed_head"
 	"lopy_socket/packet/filter/terminator/telnet"
 	"strconv"
 	"testing"
@@ -398,6 +399,23 @@ func TestCurrentDataLength(t *testing.T) {
 	})
 }
 
+func TestNewPacket(t *testing.T) {
+	Convey("NewPacket",t, func() {
+
+		thePacket := NewPacket( NewOptionDefault())
+		//theFilter,_ := telnet.NewFilter()
+
+		Convey("hehe", func() {
+			So(thePacket,ShouldNotBeNil)
+		})
+
+
+	})
+
+
+
+
+}
 func TestPacket_Put(t *testing.T) {
 	Convey("packet put test", t, func() {
 		//telnet := filter.TelnetFilter{}
@@ -419,5 +437,74 @@ func TestPacket_Put(t *testing.T) {
 			})
 		})
 
+	})
+
+	Convey("put with fixed_head",t, func() {
+
+		type exampleItem struct {
+			put [][]byte
+			expect []byte
+		}
+
+		exampleList :=[]exampleItem{
+			{
+				// 完整的包
+				put:    [][]byte{{0,0,0,0,0,4,0,4,5,6}},
+				expect: []byte{0,4,5,6},
+			},
+			{
+				//粘包的情况
+				put:[][]byte{{0,0,0,0,0,2,1,7,0,0,0,0,0,3,2,5,6}},
+				expect: []byte{1,7},
+			},
+			{
+				//粘包，中第二个包的结果，传一个空的串进去
+				put:[][]byte{{}},
+				expect: []byte{2,5,6},
+			},
+			{
+				//拆包的情况1,
+				put:[][]byte{{0},{0},{0},{0},{0},{5},{3},{3},{3},{4},{5}},
+				expect: []byte{3,3,3,4,5},
+			},
+			{
+				//拆包的情况2,
+				put:[][]byte{{0,0},{0,0},{0,3},{4,5},{9,1},{1,0,0,0},{4,5},{0,0},{3,0},{4},{5},{1},{1}},
+				expect: []byte{4,5,9},
+			},
+			{
+				//拆包的情况2,的第二个结果
+				put:[][]byte{{}},
+				expect: []byte{5,0,0,3},
+			},
+		}
+		// 个数也要对得上
+		packageCount :=0
+		packageCountExpect :=len(exampleList)
+
+		theFilter := fixed_head.NewFilter(2,6)
+
+		thePacket := NewPacket(NewOptionDefault())
+		thePacket.SetFilter(theFilter)
+		thePacket.OnData(func(dataResult filter.IFilterResult) {
+			packageCount ++
+			dataBuf := dataResult.GetDataBuffer()
+			index := int(dataBuf[0])
+			Convey("callback " + strconv.Itoa(index), func() {
+				So(dataBuf,ShouldResemble,exampleList[index].expect)
+			})
+
+
+		})
+
+		for _,item := range exampleList {
+			for _,put := range item.put {
+
+				err := thePacket.Put(put)
+				So(err,ShouldBeNil)
+			}
+
+		}
+		So(packageCount,ShouldEqual,packageCountExpect)
 	})
 }

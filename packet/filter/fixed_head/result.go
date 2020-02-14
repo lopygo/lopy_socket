@@ -51,13 +51,13 @@ func (p *Result) Assign(buffer []byte) error {
 
 
 	// 验证完成
-	buf := new(bytes.Buffer)
+	buf := bytes.Buffer{}
 	buf.Write(buffer)
 	p.SetPackageBuffer(buf.Bytes())
-	buf.Reset()
 
-	buf.Write(buffer[p.creator.bodyOffset:])
-	p.SetDataBuffer(buf.Bytes())
+	buf2 := bytes.Buffer{}
+	buf2.Write(buffer[p.creator.bodyOffset:])
+	p.SetDataBuffer(buf2.Bytes())
 
 	return nil
 }

@@ -1,3 +1,15 @@
+
+// 用于解决tcp拆/粘包的一个练手项目
+//
+// 能方便的完成拆包
+//
+// 刚学go，思想还不太熟悉，先将就着用
+//
+// 目前用代码为同步方式，异步的(goroutine)的还不知道怎么测试，后面再考虑吧
+//
+// 快速开始
+//	// hehe,后面再补吧
+//	fmp.Println("hello world")
 package packet
 
 import (
@@ -7,7 +19,9 @@ import (
 	"lopy_socket/packet/filter"
 )
 
+// 这是什么
 type Packet struct {
+	// 定义一个Filter类
 	dataFilter filter.IFilter
 
 	// 数据读取点，也就是数据在缓冲区的起点index
@@ -16,23 +30,38 @@ type Packet struct {
 	// 写数据的点，也就是写之前数据在缓冲区的终点
 	dataWritePosition int
 
-	// 这个应该是缓冲区
+	// 缓冲区
 	bufferZone []byte
 
 	// 数据包的最大长度，表示如果一个包超过了这个长度，那么将被丢弃
 	dataMaxLength int
 
+	// 回调函数，先用这种简单的方式，回头用event之类的
 	onDataCallback func(data filter.IFilterResult)
+
 	// 缓冲区的最大空间，如果要做自动扩容，那么，这个配置表示扩容后的最大空间，暂时不做自动扩容
 	//bufferZoneMaxLength int
 }
 
+func NewPacket(option *Option) *Packet  {
+	packetInstance  := new(Packet)
+	packetInstance.dataMaxLength = option.DataMaxLength
+	packetInstance.bufferZone = make([]byte,option.Length,option.Length)
+
+	return packetInstance
+}
 // 缓冲区长度
 func (p *Packet) bufferZoneLength() int {
 	return len(p.bufferZone)
 }
 
-// 设置过滤规则，即 粘/拆包的规则
+// 设置过滤规则，即 粘/拆包的过滤规则
+//
+// 这个方法不应该这样写的，而应该在NewPacket的时候指定
+//
+// 当初这么写是对语言的不熟，（那会还不知道怎么实现构造方法。。。）
+//
+// 下一步可以考虑把filter写进option
 func (p *Packet) SetFilter(filter filter.IFilter) {
 	p.dataFilter = filter
 }
@@ -46,6 +75,7 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 }
 
 // 获取可用长度，即总的缓冲区长度减当前数据长度
+//
 // 现在加一个，长度减1
 func (p *Packet) GetAvailableLen() int {
 	bufLen :=p.bufferZoneLength()
@@ -57,12 +87,16 @@ func (p *Packet) GetAvailableLen() int {
 	return p.bufferZoneLength() - p.currentDataLength() - 1
 }
 
-// 这个看怎么做，先暂时写到这里
-func (p *Packet) OnData(callback func(callback filter.IFilterResult)) {
+// 这个看怎么做，先暂时写这种简单的
+func (p *Packet) OnData(callback func(dataResult filter.IFilterResult)) {
 	p.onDataCallback = callback
 }
 
-// 外部写入数据，估计要考虑并发问题
+// 外部写入数据
+//
+// 要考虑并发问题，目前没有考虑
+//
+// 后面先试一试锁，然后再考虑channel
 func (p *Packet) Put(data []byte) error {
 	// 为空，则不管
 	if nil == data || len(data) == 0 {
@@ -114,6 +148,10 @@ func (p *Packet) readByFilter() {
 			p.dataWritePosition = 0
 			break
 		}
+		if filterResult == nil {
+			// filter 不成功，但没有err，则直接跳出
+			break
+		}
 		p.readPositionAdd(filterResult.GetPackageLength())
 
 		// 事件
@@ -161,6 +199,8 @@ func (p *Packet) writePositionAdd(length int) {
 // 目前，用 w - r = 0 则为 0值，即 []byte{}
 // 用 w 和 r 相邻（循环相邻 比如 1,2    5,6   0,len）时为最大值
 // 但仔细看看，是不是少了一位，比如bufferZone len = 10,那么 r=0,w=9时， dataLength = 9 - 0 =9 ...
+
+// 当前缓冲区内数据的长度
 func (p *Packet) currentDataLength() int {
 	span := p.dataWritePosition - p.dataReadPosition
 	if span >= 0 {
@@ -171,6 +211,7 @@ func (p *Packet) currentDataLength() int {
 }
 
 // 向缓冲区插入数据
+//
 // 只管插入数据，不管是否溢出吗？考虑一下
 func (p *Packet) insertBuffer(buf []byte) error {
 	zoneCap := cap(p.bufferZone)

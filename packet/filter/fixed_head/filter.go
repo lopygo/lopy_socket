@@ -1,11 +1,6 @@
-
-// +-------+-------+-------------------------------+
-// |request|   l   |                               |
-// | name  |   e   |    request body               |
-// |  (4)  |   n   |                               |
-// |       |  (4)  |                               |
-// +-------+-------+-------------------------------+
-// 这个只支持 int32的大端和小端，其它的可以参照自己写
+// 头部格式固定并且包含内容长度的协议
+//
+// 这个目前只支持定义长度为int32的大端和小端，其它的可以参照自己写
 package fixed_head
 
 import (
@@ -16,13 +11,17 @@ import (
 )
 
 
+// order type
 type OrderType int
 const(
+	// 小端，如 [03,00,00,00] 表示3
 	OrderTypeLittleEndian OrderType = 0
+
+	// 大端，如 [00,00,00,12] 表示18
 	OrderTypeBigEndian    OrderType = 1
 )
 
-// 默认为大端
+// new一个filter，默认为大端
 func NewFilter(lengthOffset int,bodyOffset int) *Filter {
 	fil := new(Filter)
 	fil.lengthOffset = lengthOffset
@@ -31,6 +30,7 @@ func NewFilter(lengthOffset int,bodyOffset int) *Filter {
 	return fil
 }
 
+// new一个小端的filter
 func NewFilterLittleEndian(lengthOffset int,bodyOffset int) *Filter {
 	fil := new(Filter)
 	fil.lengthOffset = lengthOffset
@@ -39,6 +39,9 @@ func NewFilterLittleEndian(lengthOffset int,bodyOffset int) *Filter {
 	return fil
 }
 
+// Sentence 1
+//
+// Sentence 2
 type Filter struct {
 
 

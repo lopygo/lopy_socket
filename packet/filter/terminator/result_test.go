@@ -11,7 +11,7 @@ func TestNewResult(t *testing.T) {
 func TestResult_Assign(t *testing.T) {
 	Convey("get result from filter",t, func() {
 
-		iFilter,_ := NewFilterWithEndBuffer([]byte{0,0})
+		iFilter,_ := NewFilter([]byte{0,0})
 
 		result,err := iFilter.GetFilterResult()
 		So(err,ShouldBeNil)

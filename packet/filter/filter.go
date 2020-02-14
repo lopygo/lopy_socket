@@ -1,3 +1,6 @@
+// filter规则
+//
+// 即拆/粘包的的规则
 package filter
 
 import "errors"
@@ -31,7 +34,7 @@ type IFilterResult interface {
 
 
 
-//
+// 定义一个默认的Result类
 type Result struct {
 	packageBuffer []byte
 	dataBuffer []byte

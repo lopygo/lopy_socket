@@ -2,6 +2,8 @@ package packet
 
 import "errors"
 
+// 配置
+//
 type Option struct {
 	// 缓冲区长度
 	Length int
@@ -16,8 +18,10 @@ type Option struct {
 	//bufferZoneMaxLength int
 }
 
-func (option Option) Check() error {
-	if option.Length < option.DataMaxLength {
+// 检查配置是否正确
+// 只做一些基本检查
+func (p *Option) Check() error {
+	if p.Length < p.DataMaxLength {
 		return errors.New("zone length can not lt data length")
 	}
 
@@ -26,12 +30,12 @@ func (option Option) Check() error {
 
 
 // 默认的option
-func DefaultOption() *Option {
+func NewOptionDefault() *Option {
 	return &Option{Length:4096,DataMaxLength:512}
 }
 
 // 类似于构造函数吧
-func GetOption(length int, dataMaxLength int) (*Option,error) {
+func NewOption(length int, dataMaxLength int) (*Option,error) {
 	option := Option{Length:length,DataMaxLength:dataMaxLength}
 	err := option.Check()
 
