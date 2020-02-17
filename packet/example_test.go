@@ -47,3 +47,12 @@ func ExamplePacket_Put() {
 	//[38 38 0 0 0 4 8 9 10 11]
 	//[8 9 10 11]
 }
+
+func ExamplePacket_Put_test2() {
+	fmt.Println("test multi example for a same method")
+	fmt.Println("is ok???")
+
+	// Output:
+	//test multi example for a same method
+	//is ok???
+}
