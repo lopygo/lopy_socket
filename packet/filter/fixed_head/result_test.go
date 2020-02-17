@@ -9,7 +9,7 @@ import (
 
 func TestNewResult(t *testing.T) {
 	Convey("new 一个result",t, func() {
-		iFilter := NewFilter(2,0)
+		iFilter := NewFilter(2,0,NewLengthTypeDefault())
 		result,err := NewResult(iFilter)
 
 		So(err,ShouldBeNil)
@@ -23,7 +23,7 @@ func TestNewResult(t *testing.T) {
 func TestResult_Assign(t *testing.T) {
 	Convey("body长度为整个包",t, func() {
 
-		iFilter := NewFilter(2,0)
+		iFilter := NewFilter(2,0,NewLengthTypeDefault())
 		result,err := NewResult(iFilter)
 
 		So(err,ShouldBeNil)
@@ -58,7 +58,7 @@ func TestResult_Assign(t *testing.T) {
 
 	Convey("body长度不包含head",t, func() {
 
-		iFilter := NewFilter(2,6)
+		iFilter := NewFilter(2,6,NewLengthTypeDefault())
 		result,err := NewResult(iFilter)
 
 		So(err,ShouldBeNil)

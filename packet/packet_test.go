@@ -481,8 +481,8 @@ func TestPacket_Put(t *testing.T) {
 		// 个数也要对得上
 		packageCount :=0
 		packageCountExpect :=len(exampleList)
-
-		theFilter := fixed_head.NewFilter(2,6)
+		lengthType,_:= fixed_head.NewLengthType(fixed_head.BufferLength4,fixed_head.OrderTypeBigEndian)
+		theFilter := fixed_head.NewFilter(2,6,lengthType)
 
 		thePacket := NewPacket(NewOptionDefault())
 		thePacket.SetFilter(theFilter)

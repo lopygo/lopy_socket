@@ -12,30 +12,151 @@ import (
 
 
 // order type
+//
+// 看了binary的源码，这里的OrderType应该不用导出，所以orderType应该用小写
 type OrderType int
 const(
-	// 小端，如 [03,00,00,00] 表示3
-	OrderTypeLittleEndian OrderType = 0
 
 	// 大端，如 [00,00,00,12] 表示18
-	OrderTypeBigEndian    OrderType = 1
+	OrderTypeBigEndian    OrderType = 0
+
+	// 小端，如 [03,00,00,00] 表示3
+	OrderTypeLittleEndian OrderType = 1
+
 )
 
-// new一个filter，默认为大端
-func NewFilter(lengthOffset int,bodyOffset int) *Filter {
-	fil := new(Filter)
-	fil.lengthOffset = lengthOffset
-	fil.bodyOffset = bodyOffset
-	fil.orderType  = OrderTypeBigEndian
-	return fil
+// 这个是不是没有什么卵用
+func getOrderTypeMap() (orderTypeMap map[OrderType]binary.ByteOrder) {
+	orderTypeMap  =make(map[OrderType]binary.ByteOrder)
+	orderTypeMap[OrderTypeBigEndian]  = binary.BigEndian
+	orderTypeMap[OrderTypeLittleEndian]  = binary.LittleEndian
+
+	return orderTypeMap
 }
 
-// new一个小端的filter
-func NewFilterLittleEndian(lengthOffset int,bodyOffset int) *Filter {
+func checkOrderType(orderType OrderType) error {
+	orderTypeMap  :=getOrderTypeMap()
+
+	_,ok := orderTypeMap[orderType]
+	if ok {
+		return nil
+	}
+
+	return errors.New("orderType error")
+}
+
+func ResolveByteOrder(receiver OrderType) (binary.ByteOrder,error)  {
+	var byteOrder binary.ByteOrder
+
+	orderTypeMap := getOrderTypeMap()
+
+	byteOrder,ok := orderTypeMap[receiver]
+	if !ok {
+		return nil,errors.New("orderType is not exists")
+	}
+	return byteOrder,nil
+}
+
+type BufferLength uint16
+const(
+	BufferLength1 = BufferLength(1)
+	BufferLength2 = BufferLength(2)
+	BufferLength4 = BufferLength(4)
+)
+
+func getBufferLengthMap() (bufferLengthMap map[BufferLength]BufferLength) {
+	bufferLengthMap =make(map[BufferLength]BufferLength)
+	bufferLengthMap[BufferLength1]  = BufferLength1
+	bufferLengthMap[BufferLength2]  = BufferLength2
+	bufferLengthMap[BufferLength4]  = BufferLength4
+
+	return bufferLengthMap
+}
+
+type LengthType struct {
+	bufferLength BufferLength // 1,2,4
+	orderType OrderType
+}
+
+func NewLengthTypeDefault() (res *LengthType) {
+	res,_ = NewLengthType(BufferLength4,OrderTypeBigEndian)
+	return
+}
+
+
+func NewLengthType(bufferLength BufferLength,orderType OrderType) (res *LengthType,err error) {
+	res = nil
+	maps := getBufferLengthMap()
+
+	//
+	_,ok := maps[bufferLength]
+	if !ok {
+		err = errors.New("")
+		return
+	}
+
+	err = checkOrderType(orderType)
+	if err != nil{
+		return
+	}
+
+
+	res = new(LengthType)
+	res.bufferLength = bufferLength
+	res.orderType = orderType
+
+	return
+}
+
+
+func (p *LengthType) ToInt(buffer []byte) ( int,error) {
+	length := len(buffer)
+
+	// 长度判断
+	if length != int(p.bufferLength) {
+		return 0,errors.New("buffer length error")
+	}
+
+	orderType,err := ResolveByteOrder(p.orderType)
+	if  err != nil{
+		return 0,err
+	}
+
+	lengthBuffer := new(bytes.Buffer)
+	lengthBuffer.Write(buffer[0: length])
+
+
+	// 这个这么定义，在32位系统上应该会出问题吧
+	var res int  = 0
+
+	switch p.bufferLength {
+	case BufferLength1:
+		var tmpLen uint8 =0
+		err = binary.Read(lengthBuffer,orderType,&tmpLen)
+		res = int(tmpLen)
+	case BufferLength2:
+		var tmpLen uint16 =0
+		err = binary.Read(lengthBuffer,orderType,&tmpLen)
+		res = int(tmpLen)
+	case BufferLength4:
+		var tmpLen uint32 =0
+		err = binary.Read(lengthBuffer,orderType,&tmpLen)
+		res = int(tmpLen)
+
+	default:
+		return 0,errors.New("length error")
+	}
+
+	return res,nil
+}
+
+// new一个filter，默认为大端
+func NewFilter(lengthOffset int,bodyOffset int,lengthType *LengthType) *Filter {
 	fil := new(Filter)
 	fil.lengthOffset = lengthOffset
 	fil.bodyOffset = bodyOffset
-	fil.orderType  = OrderTypeLittleEndian
+
+	fil.lengthType = lengthType
 	return fil
 }
 
@@ -53,8 +174,9 @@ type Filter struct {
 	// 如果length的长度是指完整包的长度，则 bodyOffset设为 0；如果length只为body的长度，则bodyOffset设为8
 	bodyOffset int
 
-	// 目前只支持大端小端
-	orderType OrderType
+
+	// length type, length 和 Order的组合
+	lengthType *LengthType
 }
 
 
@@ -68,7 +190,7 @@ func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
 
 
 	// 枪柄 orderType， 这是属于异常了
-	err :=p.checkOrderType()
+	err :=p.checkLengthType()
 	if err != nil {
 		return nil,err
 	}
@@ -132,41 +254,49 @@ func (p *Filter) checkBuffer(buffer []byte) error {
 }
 
 
-func (p *Filter) checkOrderType() error {
-	switch p.orderType {
-	case OrderTypeBigEndian:
-		return nil
-	case OrderTypeLittleEndian:
-		return nil
-	default:
-		return errors.New("orderType is not exists")
+func (p *Filter) checkLengthType() error {
+	if nil == p.lengthType {
+		return errors.New("lengthType can not be empty")
 	}
+
+	err := checkOrderType(p.lengthType.orderType)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Filter) getEndOffset(buffer []byte) (int,error) {
 
-	var orderType binary.ByteOrder
-	switch p.orderType {
-	case OrderTypeBigEndian:
-		orderType = binary.BigEndian
-	case OrderTypeLittleEndian:
-		orderType  = binary.LittleEndian
-	default:
-		return 0,errors.New("orderType is not exists")
-	}
+	//var orderType binary.ByteOrder
+	//switch p.orderType {
+	//case OrderTypeBigEndian:
+	//	orderType = binary.BigEndian
+	//case OrderTypeLittleEndian:
+	//	orderType  = binary.LittleEndian
+	//default:
+	//	return 0,errors.New("orderType is not exists")
+	//}
+
+
 
 	err := p.checkBuffer(buffer)
 	if err  != nil {
 		return 0,err
 	}
-	lengthBuffer := new(bytes.Buffer)
-	lengthBuffer.Write(buffer[p.lengthOffset:p.lengthOffset + 4])
-	var bodyLength int32
-	err= binary.Read(lengthBuffer,orderType,&bodyLength)
+
+	bodyLength,err:= p.lengthType.ToInt(buffer[p.lengthOffset:p.lengthOffset + int(p.lengthType.bufferLength)])
+	//
+	//lengthBuffer := new(bytes.Buffer)
+	//lengthBuffer.Write(buffer[p.lengthOffset:p.lengthOffset + 4])
+	//var bodyLength int32
+	//err= binary.Read(lengthBuffer,orderType,&bodyLength)
 	if err != nil {
 		return 0,err
 	}
 
-	endOffset := int(bodyLength) + p.bodyOffset
+	endOffset := bodyLength + p.bodyOffset
 	return endOffset,nil
 }

@@ -9,7 +9,8 @@ import (
 )
 
 func ExamplePacket_Put() {
-	filterInstance := fixed_head.NewFilter(2,6)
+	lengthType, _ := fixed_head.NewLengthType(fixed_head.BufferLength4, fixed_head.OrderTypeBigEndian)
+	filterInstance := fixed_head.NewFilter(2, 6, lengthType)
 	packetInstance := packet.NewPacket(packet.NewOptionDefault())
 	packetInstance.SetFilter(filterInstance)
 
@@ -20,16 +21,16 @@ func ExamplePacket_Put() {
 
 	//
 	fmt.Println("先试一个完整包")
-	packetInstance.Put([]byte{0x23,0x23,0,0,0,2,1,2})
+	packetInstance.Put([]byte{0x23, 0x23, 0, 0, 0, 2, 1, 2})
 
 	fmt.Println("如果出现粘包")
-	packetInstance.Put([]byte{0x24,0x24,0,0,0,2,3,4,0x25,0x25,0,0,0,3,5,6,7})
+	packetInstance.Put([]byte{0x24, 0x24, 0, 0, 0, 2, 3, 4, 0x25, 0x25, 0, 0, 0, 3, 5, 6, 7})
 
 	fmt.Println("如果出现拆包")
 	fmt.Println("part 1")
-	packetInstance.Put([]byte{0x26,0x26,0,0,0})
+	packetInstance.Put([]byte{0x26, 0x26, 0, 0, 0})
 	fmt.Println("part 2")
-	packetInstance.Put([]byte{4,8,9,10,11})
+	packetInstance.Put([]byte{4, 8, 9, 10, 11})
 
 	// Output:
 	//先试一个完整包
