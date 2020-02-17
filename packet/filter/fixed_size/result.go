@@ -2,7 +2,7 @@ package fixed_size
 
 import (
 	"errors"
-	"lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter"
 )
 
 func NewResult(creator *Filter) (*Result, error) {

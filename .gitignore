@@ -3,3 +3,6 @@ temp
 .idea
 
 test.go
+
+*.html
+*.out

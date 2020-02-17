@@ -2,7 +2,7 @@ package fixed_head_test
 
 import (
 	"fmt"
-	"lopy_socket/packet/filter/fixed_head"
+	"github.com/lopygo/lopy_socket/packet/filter/fixed_head"
 )
 
 func ExampleNewFilter() {

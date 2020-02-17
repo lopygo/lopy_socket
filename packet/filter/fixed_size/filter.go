@@ -4,7 +4,7 @@ package fixed_size
 import (
 	"bytes"
 	"errors"
-	"lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter"
 )
 
 type Filter struct {

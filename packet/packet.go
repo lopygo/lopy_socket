@@ -15,8 +15,8 @@ package packet
 import (
 	"errors"
 	"log"
-	pkgBuffer "lopy_socket/packet/buffer"
-	"lopy_socket/packet/filter"
+	pkgBuffer "github.com/lopygo/lopy_socket/packet/buffer"
+	"github.com/lopygo/lopy_socket/packet/filter"
 )
 
 // 这是什么

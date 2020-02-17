@@ -3,8 +3,8 @@ package telnet
 import (
 	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
-	"lopy_socket/packet/filter"
-	"lopy_socket/packet/filter/terminator"
+	"github.com/lopygo/lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter/terminator"
 
 	//"lopy_socket/packet/filter/terminator"
 	"testing"

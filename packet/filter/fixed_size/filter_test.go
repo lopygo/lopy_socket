@@ -2,7 +2,7 @@ package fixed_size
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
-	"lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter"
 	"testing"
 )
 

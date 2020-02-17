@@ -3,9 +3,9 @@ package packet_test
 
 import (
 	"fmt"
-	"lopy_socket/packet"
-	"lopy_socket/packet/filter"
-	"lopy_socket/packet/filter/fixed_head"
+	"github.com/lopygo/lopy_socket/packet"
+	"github.com/lopygo/lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter/fixed_head"
 )
 
 func ExamplePacket_Put() {

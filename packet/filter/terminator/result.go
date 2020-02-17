@@ -2,8 +2,8 @@ package terminator
 
 import (
 	"errors"
-	buffer2 "lopy_socket/packet/buffer"
-	"lopy_socket/packet/filter"
+	buffer2 "github.com/lopygo/lopy_socket/packet/buffer"
+	"github.com/lopygo/lopy_socket/packet/filter"
 )
 
 func NewResult(creator *Filter) (*Result, error) {

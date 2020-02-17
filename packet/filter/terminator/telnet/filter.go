@@ -1,6 +1,6 @@
 package telnet
 
-import "lopy_socket/packet/filter/terminator"
+import "github.com/lopygo/lopy_socket/packet/filter/terminator"
 
 
 func NewFilter() (*terminator.Filter,error) {

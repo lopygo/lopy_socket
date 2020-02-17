@@ -1,4 +1,4 @@
-module lopy_socket
+module github.com/lopygo/lopy_socket
 
 go 1.13
 

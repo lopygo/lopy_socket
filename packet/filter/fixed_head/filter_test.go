@@ -3,7 +3,7 @@ package fixed_head
 import (
 	"encoding/binary"
 	. "github.com/smartystreets/goconvey/convey"
-	"lopy_socket/packet/filter"
+	"github.com/lopygo/lopy_socket/packet/filter"
 	"testing"
 )
 
