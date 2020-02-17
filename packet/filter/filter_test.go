@@ -25,9 +25,9 @@ func TestResult_GetPackageLength(t *testing.T) {
 }
 
 func TestResult_Assign(t *testing.T) {
-	Convey("assign",t, func() {
+	Convey("assign", t, func() {
 		res := new(Result)
 		err := res.Assign([]byte{0})
-		So(err,ShouldBeError)
+		So(err, ShouldBeError)
 	})
 }

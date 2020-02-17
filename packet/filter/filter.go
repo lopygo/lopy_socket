@@ -9,10 +9,10 @@ import "errors"
 type IFilter interface {
 	// 过滤，这里两个处理结果最好都判断一下，
 	//目前有三个结果 nil,nil(这种一般忽略)  IFilterResult,nil（这种为正常） nil,error（这种应该要清空缓冲区）
-	Filter(buffer []byte) (IFilterResult,error)
+	Filter(buffer []byte) (IFilterResult, error)
 
 	// 获取数据处理实例，packet将用以下实例处理数据，解决拆粘包
-	GetFilterResult() (IFilterResult,error)
+	GetFilterResult() (IFilterResult, error)
 }
 
 type IFilterResult interface {
@@ -32,12 +32,10 @@ type IFilterResult interface {
 	GetDataBuffer() []byte
 }
 
-
-
 // 定义一个默认的Result类
 type Result struct {
 	packageBuffer []byte
-	dataBuffer []byte
+	dataBuffer    []byte
 }
 
 func (p *Result) GetPackageLength() int {
@@ -48,7 +46,7 @@ func (p *Result) GetPackageBuffer() []byte {
 	return p.packageBuffer
 }
 
-func (p *Result) SetPackageBuffer(buffer []byte)  {
+func (p *Result) SetPackageBuffer(buffer []byte) {
 	p.packageBuffer = buffer
 }
 
@@ -56,7 +54,7 @@ func (p *Result) GetDataBuffer() []byte {
 	return p.dataBuffer
 }
 
-func (p *Result) SetDataBuffer(buffer []byte)  {
+func (p *Result) SetDataBuffer(buffer []byte) {
 	p.dataBuffer = buffer
 }
 

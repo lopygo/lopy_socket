@@ -21,7 +21,6 @@ type Result struct {
 	creator *Filter
 }
 
-
 func (p *Result) Assign(buffer []byte) error {
 	// 需要验证一下不
 	length := len(buffer)

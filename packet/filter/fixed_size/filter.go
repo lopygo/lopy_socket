@@ -12,7 +12,6 @@ type Filter struct {
 	fixedSize int
 }
 
-
 func NewFilter(size int) (*Filter, error) {
 	fil := new(Filter)
 	// 基本的判断
@@ -30,14 +29,11 @@ func (p *Filter) GetFilterResult() (filter.IFilterResult, error) {
 
 }
 
-
 func (p *Filter) GetFixedSize() int {
 	return p.fixedSize
 }
 
-
 func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
-
 
 	// 长度不够直接跳过
 	if len(buffer) < p.fixedSize {
@@ -52,7 +48,6 @@ func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
 	buf := new(bytes.Buffer)
 	buf.Write(buffer[0:p.fixedSize])
 	err2 := result.Assign(buf.Bytes())
-
 
 	if err2 != nil {
 		return nil, err2

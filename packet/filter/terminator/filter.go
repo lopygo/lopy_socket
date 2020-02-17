@@ -55,7 +55,7 @@ func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
 		// 判断前面的是否相等
 		flag := true
 
-		tmpBuffer := buffer[k +1 -endBufferLen : k +1]
+		tmpBuffer := buffer[k+1-endBufferLen : k+1]
 
 		for index, dataByte := range tmpBuffer {
 			if dataByte != p.endBuffer[index] {
@@ -75,7 +75,7 @@ func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		packageBuffer := buffer[0 : k +1]
+		packageBuffer := buffer[0 : k+1]
 		err2 := result.Assign(packageBuffer)
 		if err2 != nil {
 			return nil, err2

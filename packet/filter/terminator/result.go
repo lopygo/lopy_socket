@@ -22,7 +22,6 @@ type Result struct {
 	creator *Filter
 }
 
-
 func (p *Result) Assign(buffer []byte) error {
 	// 需要验证一下不
 	length := len(buffer)
@@ -37,7 +36,7 @@ func (p *Result) Assign(buffer []byte) error {
 		return errors.New("buffer is shorter than endBuffer")
 	}
 	tmpBuffer := buffer[endBufferStart:length]
-	for k,v := range tmpBuffer {
+	for k, v := range tmpBuffer {
 		if endBuffer[k] != v {
 			return errors.New("endBuffer error")
 		}
@@ -46,8 +45,8 @@ func (p *Result) Assign(buffer []byte) error {
 	// 验证完成
 	p.SetPackageBuffer(buffer)
 
-	dataBuffer := make([]byte,endBufferStart)
-	err := buffer2.BlockCopy(buffer,0,dataBuffer,0,len(dataBuffer))
+	dataBuffer := make([]byte, endBufferStart)
+	err := buffer2.BlockCopy(buffer, 0, dataBuffer, 0, len(dataBuffer))
 	if err != nil {
 		return err
 	}

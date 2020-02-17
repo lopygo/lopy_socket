@@ -3,10 +3,10 @@ package packet
 import (
 	"bytes"
 	"fmt"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/lopygo/lopy_socket/packet/filter"
 	"github.com/lopygo/lopy_socket/packet/filter/fixed_head"
 	"github.com/lopygo/lopy_socket/packet/filter/terminator/telnet"
+	. "github.com/smartystreets/goconvey/convey"
 	"strconv"
 	"testing"
 )
@@ -27,7 +27,7 @@ func TestPacket_SetFilter(t *testing.T) {
 			So(pa.dataFilter, ShouldBeNil)
 		})
 		Convey("when filter set", func() {
-			telnetFilter,_ := telnet.NewFilter()
+			telnetFilter, _ := telnet.NewFilter()
 			pa.SetFilter(telnetFilter)
 			So(pa.dataFilter, ShouldNotBeNil)
 		})
@@ -43,7 +43,7 @@ func TestPacket_GetFilter(t *testing.T) {
 			So(fil, ShouldBeNil)
 		})
 		Convey("when filter set", func() {
-			telnetFilter,_ := telnet.NewFilter()
+			telnetFilter, _ := telnet.NewFilter()
 			pa.SetFilter(telnetFilter)
 			fil, err := pa.GetFilter()
 			So(err, ShouldBeNil)
@@ -80,7 +80,7 @@ func TestPacket_GetAvailableLen(t *testing.T) {
 			},
 			{
 				readPosition:  0,
-				writePosition: 12,	// 原则上是不可能的
+				writePosition: 12, // 原则上是不可能的
 				expect:        0,
 			},
 			{
@@ -257,16 +257,16 @@ func TestGetCurrentData(t *testing.T) {
 		arr := []testItem{
 			testItem{readPosition: 0, writePosition: 0, expectBuffer: []byte{}},
 			testItem{readPosition: 0, writePosition: 1, expectBuffer: []byte{1}},
-			testItem{readPosition: 0, writePosition: 2, expectBuffer: []byte{1,2}},
+			testItem{readPosition: 0, writePosition: 2, expectBuffer: []byte{1, 2}},
 			testItem{readPosition: 1, writePosition: 0, expectBuffer: []byte{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
 			testItem{readPosition: 1, writePosition: 1, expectBuffer: []byte{}},
-			testItem{readPosition: 1, writePosition: 5, expectBuffer: []byte{2,3,4,5}},
-			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,1}},
+			testItem{readPosition: 1, writePosition: 5, expectBuffer: []byte{2, 3, 4, 5}},
+			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1}},
 			testItem{readPosition: 3, writePosition: 14, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}},
 			//testItem{readPosition: 3, writePosition: 15, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15}},// 这个和下面这个
-			testItem{readPosition: 3, writePosition: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15}},	// 这个和上面这个
-			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1}},
-			testItem{readPosition: 3, writePosition: 2, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1,2}},
+			testItem{readPosition: 3, writePosition: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}}, // 这个和上面这个
+			testItem{readPosition: 3, writePosition: 1, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1}},
+			testItem{readPosition: 3, writePosition: 2, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2}},
 			//testItem{readPosition: 3, writePosition: 3, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,15,1,2,3}}, // 这个缺了的
 			testItem{readPosition: 3, writePosition: 3, expectBuffer: []byte{}},
 			testItem{readPosition: 3, writePosition: 4, expectBuffer: []byte{4}},
@@ -275,11 +275,11 @@ func TestGetCurrentData(t *testing.T) {
 			// 后面还要加上，尾巴的临界值
 			//testItem{readPosition: 1, writePosition: 0, expectBuffer: []byte{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 1, 2}},
 			testItem{readPosition: 12, writePosition: 13, expectBuffer: []byte{13}},
-			testItem{readPosition: 12, writePosition: 14, expectBuffer: []byte{13,14}},
-			testItem{readPosition: 12, writePosition: 0, expectBuffer: []byte{13,14,15}},
+			testItem{readPosition: 12, writePosition: 14, expectBuffer: []byte{13, 14}},
+			testItem{readPosition: 12, writePosition: 0, expectBuffer: []byte{13, 14, 15}},
 			testItem{readPosition: 13, writePosition: 13, expectBuffer: []byte{}},
 			testItem{readPosition: 13, writePosition: 14, expectBuffer: []byte{14}},
-			testItem{readPosition: 13, writePosition: 0, expectBuffer: []byte{14,15}},
+			testItem{readPosition: 13, writePosition: 0, expectBuffer: []byte{14, 15}},
 		}
 
 		for k, item := range arr {
@@ -400,26 +400,22 @@ func TestCurrentDataLength(t *testing.T) {
 }
 
 func TestNewPacket(t *testing.T) {
-	Convey("NewPacket",t, func() {
+	Convey("NewPacket", t, func() {
 
-		thePacket := NewPacket( NewOptionDefault())
+		thePacket := NewPacket(NewOptionDefault())
 		//theFilter,_ := telnet.NewFilter()
 
 		Convey("hehe", func() {
-			So(thePacket,ShouldNotBeNil)
+			So(thePacket, ShouldNotBeNil)
 		})
 
-
 	})
-
-
-
 
 }
 func TestPacket_Put(t *testing.T) {
 	Convey("packet put test", t, func() {
 		//telnet := filter.TelnetFilter{}
-		telnetFilter,_ := telnet.NewFilter()
+		telnetFilter, _ := telnet.NewFilter()
 		callbackTimes := 0
 		pa := Packet{bufferZone: make([]byte, 16), dataWritePosition: 0, dataReadPosition: 0, dataFilter: telnetFilter, dataMaxLength: 1024}
 
@@ -439,72 +435,71 @@ func TestPacket_Put(t *testing.T) {
 
 	})
 
-	Convey("put with fixed_head",t, func() {
+	Convey("put with fixed_head", t, func() {
 
 		type exampleItem struct {
-			put [][]byte
+			put    [][]byte
 			expect []byte
 		}
 
-		exampleList :=[]exampleItem{
+		exampleList := []exampleItem{
 			{
 				// 完整的包
-				put:    [][]byte{{0,0,0,0,0,4,0,4,5,6}},
-				expect: []byte{0,4,5,6},
+				put:    [][]byte{{0, 0, 0, 0, 0, 4, 0, 4, 5, 6}},
+				expect: []byte{0, 4, 5, 6},
 			},
 			{
 				//粘包的情况
-				put:[][]byte{{0,0,0,0,0,2,1,7,0,0,0,0,0,3,2,5,6}},
-				expect: []byte{1,7},
+				put:    [][]byte{{0, 0, 0, 0, 0, 2, 1, 7, 0, 0, 0, 0, 0, 3, 2, 5, 6}},
+				expect: []byte{1, 7},
 			},
 			{
 				//粘包，中第二个包的结果，传一个空的串进去
-				put:[][]byte{{}},
-				expect: []byte{2,5,6},
+				put:    [][]byte{{}},
+				expect: []byte{2, 5, 6},
 			},
 			{
 				//拆包的情况1,
-				put:[][]byte{{0},{0},{0},{0},{0},{5},{3},{3},{3},{4},{5}},
-				expect: []byte{3,3,3,4,5},
+				put:    [][]byte{{0}, {0}, {0}, {0}, {0}, {5}, {3}, {3}, {3}, {4}, {5}},
+				expect: []byte{3, 3, 3, 4, 5},
 			},
 			{
 				//拆包的情况2,
-				put:[][]byte{{0,0},{0,0},{0,3},{4,5},{9,1},{1,0,0,0},{4,5},{0,0},{3,0},{4},{5},{1},{1}},
-				expect: []byte{4,5,9},
+				put:    [][]byte{{0, 0}, {0, 0}, {0, 3}, {4, 5}, {9, 1}, {1, 0, 0, 0}, {4, 5}, {0, 0}, {3, 0}, {4}, {5}, {1}, {1}},
+				expect: []byte{4, 5, 9},
 			},
 			{
 				//拆包的情况2,的第二个结果
-				put:[][]byte{{}},
-				expect: []byte{5,0,0,3},
+				put:    [][]byte{{}},
+				expect: []byte{5, 0, 0, 3},
 			},
 		}
 		// 个数也要对得上
-		packageCount :=0
-		packageCountExpect :=len(exampleList)
-		lengthType,_:= fixed_head.NewLengthType(fixed_head.BufferLength4,fixed_head.OrderTypeBigEndian)
-		theFilter := fixed_head.NewFilter(2,6,lengthType)
+		packageCount := 0
+		packageCountExpect := len(exampleList)
+		lengthType, _ := fixed_head.NewLengthType(fixed_head.BufferLength4, fixed_head.OrderTypeBigEndian)
+		theFilter := fixed_head.NewFilter(2, 6, lengthType)
 
 		thePacket := NewPacket(NewOptionDefault())
 		thePacket.SetFilter(theFilter)
 		thePacket.OnData(func(dataResult filter.IFilterResult) {
-			packageCount ++
+			packageCount++
 			dataBuf := dataResult.GetDataBuffer()
 			index := int(dataBuf[0])
-			Convey("callback " + strconv.Itoa(index), func() {
-				So(dataBuf,ShouldResemble,exampleList[index].expect)
+			Convey("callback "+strconv.Itoa(index), func() {
+				So(dataBuf, ShouldResemble, exampleList[index].expect)
 			})
-
 
 		})
 
-		for _,item := range exampleList {
-			for _,put := range item.put {
+		for _, item := range exampleList {
+			for _, put := range item.put {
 
 				err := thePacket.Put(put)
-				So(err,ShouldBeNil)
+				So(err, ShouldBeNil)
 			}
 
 		}
-		So(packageCount,ShouldEqual,packageCountExpect)
+		So(packageCount, ShouldEqual, packageCountExpect)
 	})
 }

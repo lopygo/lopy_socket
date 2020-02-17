@@ -22,11 +22,9 @@ type Result struct {
 	creator *Filter
 }
 
-
 func (p *Result) Assign(buffer []byte) error {
 	// 需要验证一下不
 	bufferLength := len(buffer)
-
 
 	if p.creator == nil {
 		return errors.New("creator is not empty")
@@ -38,17 +36,15 @@ func (p *Result) Assign(buffer []byte) error {
 	}
 
 	// bodyLength
-	endOffset,err := p.creator.getEndOffset(buffer)
+	endOffset, err := p.creator.getEndOffset(buffer)
 	if err != nil {
 		return err
 	}
 
 	// 包的总长度不对
-	if bufferLength != endOffset{
+	if bufferLength != endOffset {
 		return errors.New("length of buffer error")
 	}
-
-
 
 	// 验证完成
 	buf := bytes.Buffer{}

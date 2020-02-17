@@ -1,4 +1,3 @@
-
 // 用于解决tcp拆/粘包的一个练手项目
 //
 // 能方便的完成拆包
@@ -14,9 +13,9 @@ package packet
 
 import (
 	"errors"
-	"log"
 	pkgBuffer "github.com/lopygo/lopy_socket/packet/buffer"
 	"github.com/lopygo/lopy_socket/packet/filter"
+	"log"
 )
 
 // 这是什么
@@ -43,13 +42,14 @@ type Packet struct {
 	//bufferZoneMaxLength int
 }
 
-func NewPacket(option *Option) *Packet  {
-	packetInstance  := new(Packet)
+func NewPacket(option *Option) *Packet {
+	packetInstance := new(Packet)
 	packetInstance.dataMaxLength = option.DataMaxLength
-	packetInstance.bufferZone = make([]byte,option.Length,option.Length)
+	packetInstance.bufferZone = make([]byte, option.Length, option.Length)
 
 	return packetInstance
 }
+
 // 缓冲区长度
 func (p *Packet) bufferZoneLength() int {
 	return len(p.bufferZone)
@@ -78,7 +78,7 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 //
 // 现在加一个，长度减1
 func (p *Packet) GetAvailableLen() int {
-	bufLen :=p.bufferZoneLength()
+	bufLen := p.bufferZoneLength()
 	dataLen := p.currentDataLength()
 	if dataLen >= bufLen {
 		return 0
@@ -127,8 +127,8 @@ func (p *Packet) Put(data []byte) error {
 
 // 读出filter后的数据
 func (p *Packet) readByFilter() {
-	for{
-		data,err := p.getCurrentData()
+	for {
+		data, err := p.getCurrentData()
 		if err != nil {
 			break
 		}
@@ -142,7 +142,7 @@ func (p *Packet) readByFilter() {
 			p.dataWritePosition = 0
 			break
 		}
-		filterResult,err :=p.dataFilter.Filter(data)
+		filterResult, err := p.dataFilter.Filter(data)
 		if err != nil {
 			p.dataReadPosition = 0
 			p.dataWritePosition = 0
