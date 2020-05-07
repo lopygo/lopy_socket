@@ -113,7 +113,11 @@ func (p *Packet) Put(data []byte) error {
 		msg := "数据长度限制，请跟据实际情况重新配置 dataMaxLength"
 		return errors.New(msg)
 	}
-	if dataLength+p.currentDataLength() > p.bufferZoneLength() {
+
+	//fmt.Println(p.GetAvailableLen())
+	//fmt.Println(p.bufferZoneLength() - p.currentDataLength())
+	//if dataLength+p.currentDataLength() > p.bufferZoneLength() {
+	if dataLength > p.GetAvailableLen() {
 		msg := "缓冲区大小不足"
 		return errors.New(msg)
 	}
@@ -221,7 +225,7 @@ func (p *Packet) currentDataLength() int {
 func (p *Packet) insertBuffer(buf []byte) error {
 
 
-	zoneCap := cap(p.bufferZone)
+	zoneCap := len(p.bufferZone)
 	bufLen := len(buf)
 
 	if bufLen > p.bufferZoneLength() {
@@ -231,7 +235,8 @@ func (p *Packet) insertBuffer(buf []byte) error {
 		return errors.New("插入的数据不能大于缓冲区的长度")
 	}
 
-	if lengthSpan := p.dataWritePosition + bufLen - zoneCap; lengthSpan > 0 {
+	//
+	if lengthSpan := p.dataWritePosition + bufLen - zoneCap; lengthSpan >= 0 {
 		// 需要截成部分
 
 		// 前半部分，放尾巴
