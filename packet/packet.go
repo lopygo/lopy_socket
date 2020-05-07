@@ -16,6 +16,7 @@ import (
 	pkgBuffer "github.com/lopygo/lopy_socket/packet/buffer"
 	"github.com/lopygo/lopy_socket/packet/filter"
 	"log"
+	"sync"
 )
 
 // 这是什么
@@ -98,6 +99,10 @@ func (p *Packet) OnData(callback func(dataResult filter.IFilterResult)) {
 //
 // 后面先试一试锁，然后再考虑channel
 func (p *Packet) Put(data []byte) error {
+	var m sync.Mutex
+	m.Lock()
+	defer m.Unlock()
+
 	// 为空，则不管
 	if nil == data || len(data) == 0 {
 		return nil
@@ -214,6 +219,8 @@ func (p *Packet) currentDataLength() int {
 //
 // 只管插入数据，不管是否溢出吗？考虑一下
 func (p *Packet) insertBuffer(buf []byte) error {
+
+
 	zoneCap := cap(p.bufferZone)
 	bufLen := len(buf)
 
