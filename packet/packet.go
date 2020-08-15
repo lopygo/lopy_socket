@@ -41,12 +41,15 @@ type Packet struct {
 
 	// 缓冲区的最大空间，如果要做自动扩容，那么，这个配置表示扩容后的最大空间，暂时不做自动扩容
 	//bufferZoneMaxLength int
+
+	m sync.Mutex
 }
 
 func NewPacket(option *Option) *Packet {
 	packetInstance := new(Packet)
 	packetInstance.dataMaxLength = option.DataMaxLength
 	packetInstance.bufferZone = make([]byte, option.Length, option.Length)
+	packetInstance.dataFilter = option.Filter
 
 	return packetInstance
 }
@@ -69,6 +72,7 @@ func (p *Packet) SetFilter(filter filter.IFilter) {
 
 // 获取过滤规则，即 粘/拆包的规则
 func (p *Packet) GetFilter() (filter.IFilter, error) {
+
 	if nil == p.dataFilter {
 		return nil, errors.New("filter must be set")
 	}
@@ -79,6 +83,9 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 //
 // 现在加一个，长度减1
 func (p *Packet) GetAvailableLen() int {
+	p.m.Lock()
+	defer p.m.Unlock()
+
 	bufLen := p.bufferZoneLength()
 	dataLen := p.currentDataLength()
 	if dataLen >= bufLen {
@@ -99,9 +106,7 @@ func (p *Packet) OnData(callback func(dataResult filter.IFilterResult)) {
 //
 // 后面先试一试锁，然后再考虑channel
 func (p *Packet) Put(data []byte) error {
-	var m sync.Mutex
-	m.Lock()
-	defer m.Unlock()
+
 
 	// 为空，则不管
 	if nil == data || len(data) == 0 {
@@ -121,6 +126,9 @@ func (p *Packet) Put(data []byte) error {
 		msg := "缓冲区大小不足"
 		return errors.New(msg)
 	}
+
+	p.m.Lock()
+	defer p.m.Unlock()
 
 	// 插入数据
 	err := p.insertBuffer(data)
@@ -146,13 +154,16 @@ func (p *Packet) readByFilter() {
 		}
 
 		// 从这里开始，的异常，要清空数据
-		if p.dataFilter == nil {
+		fil,_ := p.GetFilter()
+		if fil == nil {
+			// flush
 			p.dataReadPosition = 0
 			p.dataWritePosition = 0
 			break
 		}
-		filterResult, err := p.dataFilter.Filter(data)
+		filterResult, err := fil.Filter(data)
 		if err != nil {
+			// flush
 			p.dataReadPosition = 0
 			p.dataWritePosition = 0
 			break
@@ -224,10 +235,7 @@ func (p *Packet) currentDataLength() int {
 // 只管插入数据，不管是否溢出吗？考虑一下
 func (p *Packet) insertBuffer(buf []byte) error {
 
-
-	zoneCap := len(p.bufferZone)
 	bufLen := len(buf)
-
 	if bufLen > p.bufferZoneLength() {
 		// 这里应该清空数据
 		p.dataWritePosition = 0
@@ -235,6 +243,7 @@ func (p *Packet) insertBuffer(buf []byte) error {
 		return errors.New("插入的数据不能大于缓冲区的长度")
 	}
 
+	zoneCap := len(p.bufferZone)
 	//
 	if lengthSpan := p.dataWritePosition + bufLen - zoneCap; lengthSpan >= 0 {
 		// 需要截成部分
@@ -293,4 +302,11 @@ func (p *Packet) getCurrentData() ([]byte, error) {
 	}
 
 	return buffer, nil
+}
+
+func (p *Packet) Flush()  {
+	p.m.Lock()
+	p.dataWritePosition = p.dataReadPosition
+	p.m.Unlock()
+
 }

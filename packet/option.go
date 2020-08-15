@@ -1,6 +1,9 @@
 package packet
 
-import "errors"
+import (
+	"errors"
+	"github.com/lopygo/lopy_socket/packet/filter"
+)
 
 // 配置
 //
@@ -14,6 +17,8 @@ type Option struct {
 	// 暂时不用
 	//// 缓冲区最大长度，（如果启用缓冲区自动扩容，那么这个是指最大扩容后的最大长度）
 	//bufferZoneMaxLength int
+
+	Filter filter.IFilter
 }
 
 // 检查配置是否正确
