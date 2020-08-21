@@ -31,6 +31,7 @@ func (p *Filter) GetTerminatorBuffer() []byte {
 	return p.endBuffer
 }
 
+// 还可以优化一点点
 func (p *Filter) Filter(buffer []byte) (filter.IFilterResult, error) {
 
 	endBufferLen := len(p.endBuffer)

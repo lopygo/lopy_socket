@@ -58,7 +58,7 @@ func TestPacket_GetAvailableLen(t *testing.T) {
 		pa := Packet{bufferZone: make([]byte, 12)}
 
 		Convey("default it is len", func() {
-			So(pa.GetAvailableLen(), ShouldEqual, 11)
+			So(pa.getAvailableLen(), ShouldEqual, 11)
 		})
 
 		type testItem struct {
@@ -118,7 +118,7 @@ func TestPacket_GetAvailableLen(t *testing.T) {
 			Convey(builder.String(), func() {
 				pa.dataReadPosition = item.readPosition
 				pa.dataWritePosition = item.writePosition
-				So(pa.GetAvailableLen(), ShouldEqual, item.expect)
+				So(pa.getAvailableLen(), ShouldEqual, item.expect)
 			})
 
 		}

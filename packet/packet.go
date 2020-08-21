@@ -82,10 +82,7 @@ func (p *Packet) GetFilter() (filter.IFilter, error) {
 // 获取可用长度，即总的缓冲区长度减当前数据长度
 //
 // 现在加一个，长度减1
-func (p *Packet) GetAvailableLen() int {
-	p.m.Lock()
-	defer p.m.Unlock()
-
+func (p *Packet) getAvailableLen() int {
 	bufLen := p.bufferZoneLength()
 	dataLen := p.currentDataLength()
 	if dataLen >= bufLen {
@@ -93,6 +90,13 @@ func (p *Packet) GetAvailableLen() int {
 	}
 
 	return p.bufferZoneLength() - p.currentDataLength() - 1
+}
+
+func (p *Packet) GetAvailableLen() int {
+	p.m.Lock()
+	l := p.getAvailableLen()
+	p.m.Unlock()
+	return l
 }
 
 // 这个看怎么做，先暂时写这种简单的
@@ -107,7 +111,6 @@ func (p *Packet) OnData(callback func(dataResult filter.IFilterResult)) {
 // 后面先试一试锁，然后再考虑channel
 func (p *Packet) Put(data []byte) error {
 
-
 	// 为空，则不管
 	if nil == data || len(data) == 0 {
 		return nil
@@ -119,10 +122,10 @@ func (p *Packet) Put(data []byte) error {
 		return errors.New(msg)
 	}
 
-	//fmt.Println(p.GetAvailableLen())
+	//fmt.Println(p.getAvailableLen())
 	//fmt.Println(p.bufferZoneLength() - p.currentDataLength())
 	//if dataLength+p.currentDataLength() > p.bufferZoneLength() {
-	if dataLength > p.GetAvailableLen() {
+	if dataLength > p.getAvailableLen() {
 		msg := "缓冲区大小不足"
 		return errors.New(msg)
 	}
@@ -154,7 +157,7 @@ func (p *Packet) readByFilter() {
 		}
 
 		// 从这里开始，的异常，要清空数据
-		fil,_ := p.GetFilter()
+		fil, _ := p.GetFilter()
 		if fil == nil {
 			// flush
 			p.dataReadPosition = 0
@@ -304,7 +307,7 @@ func (p *Packet) getCurrentData() ([]byte, error) {
 	return buffer, nil
 }
 
-func (p *Packet) Flush()  {
+func (p *Packet) Flush() {
 	p.m.Lock()
 	p.dataWritePosition = p.dataReadPosition
 	p.m.Unlock()
