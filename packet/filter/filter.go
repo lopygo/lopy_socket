@@ -56,7 +56,7 @@ func (p *Result) GetDataBuffer() []byte {
 
 func (p *Result) SetDataBuffer(buffer []byte) {
 	p.dataBuffer = make([]byte, len(buffer))
-	copy(p.dataBuffer,buffer)
+	copy(p.dataBuffer, buffer)
 }
 
 func (p *Result) GetDataLength() int {
