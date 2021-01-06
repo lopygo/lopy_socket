@@ -189,6 +189,9 @@ func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 				p.triggerErrorCallback(fmt.Errorf("get heartbeat template error: %+v", err))
 				continue
 			}
+			if len(buf) == 0 {
+				continue
+			}
 			_, err = conn.Write(buf)
 			if err != nil {
 				p.triggerErrorCallback(fmt.Errorf("send heartbeat error: %+v", err))
