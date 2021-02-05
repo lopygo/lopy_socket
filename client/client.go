@@ -165,6 +165,16 @@ func (p *Client) Close() error {
 	return nil
 }
 
+func (p *Client) Send(buf []byte) (n int, err error) {
+	if p.conn == nil {
+		err = fmt.Errorf("client can not connected")
+	} else {
+		n, err = p.conn.Write(buf)
+	}
+
+	return
+}
+
 func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 
 	for p.status {
