@@ -208,9 +208,6 @@ func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 				continue
 			}
 
-		default:
-
-			break
 		}
 	}
 
