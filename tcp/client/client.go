@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -27,21 +28,35 @@ type Client struct {
 	OnConnected       OnConnected
 	OnHeartPackageGet OnHeartPackageGet
 
-	// 最后一次收到data的时间
-	lastReceivedTime time.Time
-
-	status bool
+	// 心跳到期
+	heartbeatExpirtReceived time.Time
+	heartbeatExpirtSent     time.Time
 
 	config Config
 	locker sync.Mutex
 
 	conn net.Conn
+
+	ctx      context.Context
+	ctxClose func()
+}
+
+func (p *Client) IsStarted() bool {
+	return nil != p.ctx
 }
 
 func (p *Client) Connect() error {
-	if p.status {
+
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	if p.IsStarted() {
+
 		return nil
 	}
+
+	//
+	p.ctx, p.ctxClose = context.WithCancel(context.Background())
 
 	go p.listen()
 
@@ -56,17 +71,45 @@ func (p *Client) triggerErrorCallback(err error) {
 	go p.OnError(p, err)
 }
 
-func (p *Client) listen() {
-	p.locker.Lock()
-	defer func() {
-		p.Close()
-		p.locker.Unlock()
-	}()
+func (p *Client) triggerConnectedCallback() {
 
-	if p.status == true {
+	// connected
+	if p.OnConnected == nil {
 		return
 	}
-	p.status = true
+	go p.OnConnected(p)
+}
+
+func (p *Client) triggerCloseCallback() {
+	if p.OnClosed == nil {
+		return
+	}
+
+	go p.OnClosed(p)
+}
+
+func (p *Client) heartbeatExpireTime(t int) time.Time {
+	return time.Now().Add(time.Duration(p.config.Heartbeat+t) * time.Second)
+}
+
+func (p *Client) heartbeatUpdateSent() {
+	p.heartbeatExpirtSent = p.heartbeatExpireTime(0)
+}
+
+func (p *Client) heartbeatUpdateReceived() {
+	p.heartbeatExpirtReceived = p.heartbeatExpireTime(3)
+}
+
+func (p *Client) listen() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			p.Close()
+		}
+
+		p.ctx = nil
+
+	}()
 
 	// buffer zone
 	lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
@@ -85,50 +128,69 @@ func (p *Client) listen() {
 	}
 
 	conn, err := d.Dial("tcp", fmt.Sprintf("%s:%d", p.config.Ip, p.config.Port))
-	defer func() {
-		if p.OnClosed != nil {
-			p.OnClosed(p)
-		}
-	}()
 	if err != nil {
 		p.triggerErrorCallback(fmt.Errorf("connect failed, err: %+v", err))
 		return
 	}
+	defer func() {
+		p.Close()
+		p.triggerCloseCallback()
+	}()
 	p.conn = conn
-	p.lastReceivedTime = time.Now()
+
+	go func() {
+		<-p.ctx.Done()
+		conn.Close()
+		p.ctx = nil
+
+	}()
+
+	p.heartbeatUpdateReceived()
 
 	// connected
-	if p.OnConnected != nil {
-		go p.OnConnected(p)
-	}
+	p.triggerConnectedCallback()
 
 	// check connect status
 	if p.config.Heartbeat > 0 {
-		loopCheckTicker := time.NewTicker(time.Duration(p.config.Heartbeat) * time.Second)
+		//
+		loopCheckTicker := time.NewTicker(time.Second)
 		defer loopCheckTicker.Stop()
 		go p.loopCheckStatus(conn, loopCheckTicker)
 	}
 
-	for p.status {
-		buf := make([]byte, 1024)
+	for p.IsStarted() {
+
+		select {
+		case <-p.ctx.Done():
+			// close
+			return
+		default:
+		}
+
+		//
+
+		buf := make([]byte, p.config.BufferZoneLenth)
 		theLen, err := conn.Read(buf)
 
 		if nil != err {
 			if err == io.EOF {
 				p.triggerErrorCallback(fmt.Errorf("connection closed by remote device"))
-				break
+
+			} else {
+
+				// 报错直接关闭
+				p.triggerErrorCallback(fmt.Errorf("read buffer error: %+v", err))
 			}
-			// 报错直接关闭
-			p.triggerErrorCallback(fmt.Errorf("read buffer error: %+v", err))
-			break
+			return
 		}
 
 		// 这种情况应该不会发生
+		// 读取超时时会发生，串口中试过，tcp没有试过
 		if theLen == 0 {
 			continue
 		}
 		// 收到成功，就更新
-		p.lastReceivedTime = time.Now()
+		p.heartbeatUpdateReceived()
 
 		newBuf := make([]byte, theLen)
 		copy(newBuf, buf)
@@ -157,10 +219,8 @@ func (p *Client) onReceivedData(dataResult filter.IFilterResult) {
 }
 
 func (p *Client) Close() error {
-	p.status = false
-	if p.conn != nil {
-
-		p.conn.Close()
+	if p.ctxClose != nil {
+		p.ctxClose()
 	}
 	return nil
 }
@@ -169,6 +229,7 @@ func (p *Client) Send(buf []byte) (n int, err error) {
 	if p.conn == nil {
 		err = fmt.Errorf("client can not connected")
 	} else {
+		p.heartbeatUpdateSent()
 		n, err = p.conn.Write(buf)
 	}
 
@@ -177,20 +238,26 @@ func (p *Client) Send(buf []byte) (n int, err error) {
 
 func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 
-	for p.status {
+	for p.IsStarted() {
 		select {
+		case <-p.ctx.Done():
+			return
 		case <-ticker.C:
 
 			//
-			timeExpire := time.Now().Add(time.Duration(-2-p.config.Heartbeat) * time.Second)
-
-			if p.lastReceivedTime.Before(timeExpire) {
+			// check
+			if time.Now().After(p.heartbeatExpirtReceived) {
 				p.triggerErrorCallback(fmt.Errorf("heartbeat timeout"))
 				p.Close()
 				return
 			}
 
+			// send for check
 			if p.OnHeartPackageGet == nil {
+				continue
+			}
+
+			if time.Now().Before(p.heartbeatExpirtSent) {
 				continue
 			}
 
@@ -202,7 +269,8 @@ func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 			if len(buf) == 0 {
 				continue
 			}
-			_, err = conn.Write(buf)
+
+			_, err = p.Send(buf)
 			if err != nil {
 				p.triggerErrorCallback(fmt.Errorf("send heartbeat error: %+v", err))
 				continue

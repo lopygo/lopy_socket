@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/lopygo/lopy_socket/client"
 	"github.com/lopygo/lopy_socket/packet/filter"
-	"github.com/lopygo/lopy_socket/packet/filter/fixed_head"
+	"github.com/lopygo/lopy_socket/packet/filter/terminator"
+	"github.com/lopygo/lopy_socket/tcp/client"
 )
 
 // you can use sockit to start a server
@@ -28,13 +29,11 @@ func main() {
 
 	flag.Parse()
 
-	lengthType, err := fixed_head.NewLengthType(fixed_head.BufferLength2, fixed_head.OrderTypeBigEndian)
+	clientFilter, err := terminator.NewFilter([]byte{0x0d, 0x0a})
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("filter error: ", err)
 		return
 	}
-
-	clientFilter := fixed_head.NewFilter(4, 6, lengthType)
 	clientConf := client.ConfigDefault()
 	clientConf.BufferZoneLenth = 1024
 	clientConf.DataMaxLength = 512
@@ -53,10 +52,6 @@ func main() {
 	cli.OnClosed = func(client *client.Client) {
 		fmt.Println("client closed")
 
-		go func() {
-			time.Sleep(10 * time.Second)
-			cli.Connect()
-		}()
 	}
 
 	cli.OnConnected = func(client *client.Client) {
@@ -65,7 +60,7 @@ func main() {
 
 	cli.OnDataReceived = func(client *client.Client, dataResult filter.IFilterResult) {
 
-		fmt.Println(dataResult.GetDataBuffer())
+		fmt.Println(string(dataResult.GetDataBuffer()))
 	}
 
 	cli.OnError = func(client *client.Client, err error) {
@@ -74,23 +69,44 @@ func main() {
 	}
 
 	cli.OnHeartPackageGet = func(client *client.Client) ([]byte, error) {
-		return []byte{
-			0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0xFF, 0x02, 0x00, 0xC8, 0x00, byte(2),
-		}, nil
+		return []byte("AT+STACH0=?\r\n"), nil
 	}
 
-	err = cli.Connect()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ticker := time.NewTicker(time.Second * 20)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				err := cli.Connect()
+				if nil == err {
+					continue
+				}
+
+				fmt.Println("connect error: ", err)
+			case <-ctx.Done():
+
+				return
+			}
+		}
+	}()
+
+	go func() {
+
+		err = cli.Connect()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	for {
 		select {
 		case <-interrupt:
-
+			cancel()
 			return
 		}
 	}
