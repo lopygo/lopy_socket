@@ -36,12 +36,12 @@ func main() {
 
 	clientFilter := fixed_head.NewFilter(4, 6, lengthType)
 	clientConf := client.ConfigDefault()
-	clientConf.BufferZoneLenth = 1024
+	clientConf.BufferZoneLength = 1024
 	clientConf.DataMaxLength = 512
 	clientConf.Heartbeat = 15
 	clientConf.Ip = *ip
 	clientConf.Port = uint16(*port)
-	clientConf.DataFilter = clientFilter
+	clientConf.PacketFilter = clientFilter
 
 	cli, err := client.NewClient(clientConf)
 

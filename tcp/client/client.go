@@ -44,7 +44,7 @@ type Client struct {
 func NewClient(conf Config) (*Client, error) {
 	cli := new(Client)
 	cli.config = conf
-	if conf.DataFilter == nil {
+	if conf.PacketFilter == nil {
 		return nil, fmt.Errorf("client had no filter")
 	}
 	return cli, nil
@@ -65,6 +65,11 @@ func (p *Client) Connect() error {
 		return nil
 	}
 
+	lopyPacket, err := p.createPacket()
+	if err != nil {
+		return err
+	}
+
 	//
 	p.ctx, p.ctxClose = context.WithCancel(context.Background())
 
@@ -79,10 +84,10 @@ func (p *Client) Connect() error {
 	if err != nil {
 		return err
 	}
-	// defer func() {
-	// 	p.Close()
-	// 	p.triggerCloseCallback()
-	// }()
+
+	// connected
+	p.triggerConnectedCallback()
+
 	p.conn = conn
 
 	go func() {
@@ -93,19 +98,20 @@ func (p *Client) Connect() error {
 
 	}()
 
-	lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
-	if err != nil {
-		p.Close()
-		p.triggerErrorCallback(fmt.Errorf("init buffer zone err: %+v", err))
-		return err
-	}
-	lopyOption.Filter = p.config.DataFilter
-	lopyPacket := packet.NewPacket(lopyOption)
-	lopyPacket.OnData(p.onReceivedData)
-
 	go p.listen(conn, lopyPacket)
 
 	return nil
+}
+
+func (p *Client) createPacket() (*packet.Packet, error) {
+	lopyOption, err := packet.NewOption(p.config.BufferZoneLength, p.config.DataMaxLength)
+	if err != nil {
+		return nil, err
+	}
+	lopyOption.Filter = p.config.PacketFilter
+	lopyPacket := packet.NewPacket(lopyOption)
+	lopyPacket.OnData(p.onReceivedData)
+	return lopyPacket, nil
 }
 
 func (p *Client) listen(conn net.Conn, lopyPacket *packet.Packet) {
@@ -113,23 +119,9 @@ func (p *Client) listen(conn net.Conn, lopyPacket *packet.Packet) {
 		p.Close()
 	}()
 
-	// buffer zone
-	// lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
-	// if err != nil {
-	// 	p.Close()
-	// 	p.triggerErrorCallback(fmt.Errorf("init buffer zone err: %+v", err))
-	// 	return
-	// }
-	// lopyOption.Filter = p.config.DataFilter
-	// lopyPacket := packet.NewPacket(lopyOption)
-	// lopyPacket.OnData(p.onReceivedData)
-
 	// connected
 
 	p.heartbeatUpdateReceived()
-
-	// connected
-	p.triggerConnectedCallback()
 
 	// check connect status
 	if p.config.Heartbeat > 0 {
@@ -150,7 +142,7 @@ func (p *Client) listen(conn net.Conn, lopyPacket *packet.Packet) {
 
 		//
 
-		buf := make([]byte, p.config.BufferZoneLenth)
+		buf := make([]byte, p.config.BufferZoneLength)
 		theLen, err := conn.Read(buf)
 
 		if nil != err {
