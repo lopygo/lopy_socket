@@ -41,6 +41,16 @@ type Client struct {
 	ctxClose func()
 }
 
+func NewClient(conf Config) (*Client, error) {
+	cli := new(Client)
+	cli.config = conf
+	if conf.DataFilter == nil {
+		return nil, fmt.Errorf("client had no filter")
+	}
+	return cli, nil
+
+}
+
 func (p *Client) IsStarted() bool {
 	return nil != p.ctx
 }
@@ -58,92 +68,63 @@ func (p *Client) Connect() error {
 	//
 	p.ctx, p.ctxClose = context.WithCancel(context.Background())
 
-	go p.listen()
-
-	return nil
-}
-
-func (p *Client) triggerErrorCallback(err error) {
-	if p.OnError == nil {
-		return
-	}
-
-	go p.OnError(p, err)
-}
-
-func (p *Client) triggerConnectedCallback() {
-
-	// connected
-	if p.OnConnected == nil {
-		return
-	}
-	go p.OnConnected(p)
-}
-
-func (p *Client) triggerCloseCallback() {
-	if p.OnClosed == nil {
-		return
-	}
-
-	go p.OnClosed(p)
-}
-
-func (p *Client) heartbeatExpireTime(t int) time.Time {
-	return time.Now().Add(time.Duration(p.config.Heartbeat+t) * time.Second)
-}
-
-func (p *Client) heartbeatUpdateSent() {
-	p.heartbeatExpirtSent = p.heartbeatExpireTime(0)
-}
-
-func (p *Client) heartbeatUpdateReceived() {
-	p.heartbeatExpirtReceived = p.heartbeatExpireTime(3)
-}
-
-func (p *Client) listen() {
-	defer func() {
-		err := recover()
-		if err != nil {
-			p.Close()
-		}
-
-		p.ctx = nil
-
-	}()
-
-	// buffer zone
-	lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
-	if err != nil {
-		p.triggerErrorCallback(fmt.Errorf("init buffer zone err: %+v", err))
-		return
-	}
-	lopyOption.Filter = p.config.DataFilter
-	lopyPacket := packet.NewPacket(lopyOption)
-	lopyPacket.OnData(p.onReceivedData)
-
-	// connected
 	d := net.Dialer{
 		Timeout:   time.Duration(p.config.Timeout) * time.Millisecond,
 		KeepAlive: time.Duration(p.config.KeepAlive) * time.Millisecond,
 	}
 
+	// net.DialTCP()
+
 	conn, err := d.Dial("tcp", fmt.Sprintf("%s:%d", p.config.Ip, p.config.Port))
 	if err != nil {
-		p.triggerErrorCallback(fmt.Errorf("connect failed, err: %+v", err))
-		return
+		return err
 	}
-	defer func() {
-		p.Close()
-		p.triggerCloseCallback()
-	}()
+	// defer func() {
+	// 	p.Close()
+	// 	p.triggerCloseCallback()
+	// }()
 	p.conn = conn
 
 	go func() {
 		<-p.ctx.Done()
 		conn.Close()
 		p.ctx = nil
+		p.triggerCloseCallback()
 
 	}()
+
+	lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
+	if err != nil {
+		p.Close()
+		p.triggerErrorCallback(fmt.Errorf("init buffer zone err: %+v", err))
+		return err
+	}
+	lopyOption.Filter = p.config.DataFilter
+	lopyPacket := packet.NewPacket(lopyOption)
+	lopyPacket.OnData(p.onReceivedData)
+
+	go p.listen(conn, lopyPacket)
+
+	return nil
+}
+
+func (p *Client) listen(conn net.Conn, lopyPacket *packet.Packet) {
+	defer func() {
+		p.Close()
+	}()
+
+	// buffer zone
+	// lopyOption, err := packet.NewOption(p.config.BufferZoneLenth, p.config.DataMaxLength)
+	// if err != nil {
+	// 	p.Close()
+	// 	p.triggerErrorCallback(fmt.Errorf("init buffer zone err: %+v", err))
+	// 	return
+	// }
+	// lopyOption.Filter = p.config.DataFilter
+	// lopyPacket := packet.NewPacket(lopyOption)
+	// lopyPacket.OnData(p.onReceivedData)
+
+	// connected
 
 	p.heartbeatUpdateReceived()
 
@@ -160,12 +141,12 @@ func (p *Client) listen() {
 
 	for p.IsStarted() {
 
-		select {
-		case <-p.ctx.Done():
-			// close
-			return
-		default:
-		}
+		// select {
+		// case <-p.ctx.Done():
+		// 	// close
+		// 	return
+		// default:
+		// }
 
 		//
 
@@ -177,9 +158,7 @@ func (p *Client) listen() {
 				p.triggerErrorCallback(fmt.Errorf("connection closed by remote device"))
 
 			} else {
-
-				// 报错直接关闭
-				p.triggerErrorCallback(fmt.Errorf("read buffer error: %+v", err))
+				p.triggerErrorCallback(err)
 			}
 			return
 		}
@@ -193,7 +172,7 @@ func (p *Client) listen() {
 		p.heartbeatUpdateReceived()
 
 		newBuf := make([]byte, theLen)
-		copy(newBuf, buf)
+		copy(newBuf, buf[:theLen])
 
 		err = lopyPacket.Put(newBuf)
 		if err != nil {
@@ -281,12 +260,39 @@ func (p *Client) loopCheckStatus(conn net.Conn, ticker *time.Ticker) {
 
 }
 
-func NewClient(conf Config) (*Client, error) {
-	cli := new(Client)
-	cli.config = conf
-	if conf.DataFilter == nil {
-		return nil, fmt.Errorf("client had no filter")
+func (p *Client) triggerErrorCallback(err error) {
+	if p.OnError == nil {
+		return
 	}
-	return cli, nil
 
+	go p.OnError(p, err)
+}
+
+func (p *Client) triggerConnectedCallback() {
+
+	// connected
+	if p.OnConnected == nil {
+		return
+	}
+	go p.OnConnected(p)
+}
+
+func (p *Client) triggerCloseCallback() {
+	if p.OnClosed == nil {
+		return
+	}
+
+	go p.OnClosed(p)
+}
+
+func (p *Client) heartbeatExpireTime(t int) time.Time {
+	return time.Now().Add(time.Duration(p.config.Heartbeat+t) * time.Second)
+}
+
+func (p *Client) heartbeatUpdateSent() {
+	p.heartbeatExpirtSent = p.heartbeatExpireTime(0)
+}
+
+func (p *Client) heartbeatUpdateReceived() {
+	p.heartbeatExpirtReceived = p.heartbeatExpireTime(3)
 }
